@@ -1,110 +1,76 @@
+ 
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sports Stats & Matches</title>
-  <meta name="description" content="See upcoming football matches, team form, last 5 games results, and match stats for free!">
-  <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f4f4; }
-    header { background-color: #333; color: white; text-align: center; padding: 15px 0; font-size: 1.5em; }
-    .container { padding: 10px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
-    th { background-color: #444; color: white; }
-    tr:nth-child(even) { background-color: #eee; }
-    img { border-radius: 50%; vertical-align: middle; }
-    a { color: blue; text-decoration: underline; }
-    @media (max-width: 600px) {
-      th, td { font-size: 12px; padding: 5px; }
-      img { width: 25px; height: 25px; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Sports Website</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            margin: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        table {
+            width: 90%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            background-color: #fff;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .W { color: green; font-weight: bold; }
+        .L { color: red; font-weight: bold; }
+        .D { color: gray; font-weight: bold; }
+        .team-logo {
+            width: 30px;
+            height: 30px;
+            vertical-align: middle;
+            margin-right: 5px;
+        }
+    </style>
 </head>
 <body>
-  <header>Sports Stats & Matches</header>
-  <div class="container">
-    <div style="overflow-x:auto;">
-      <table id="matchesTable">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Time</th>
-            <th>Home Team</th>
-            <th>Away Team</th>
-            <th>League / Link</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </div>
+    <h1>Upcoming Matches</h1>
 
-  <script>
-    const tableBody = document.querySelector('#matchesTable tbody');
+    <table>
+        <tr>
+            <th>Team 1</th>
+            <th>Team 2</th>
+            <th>Result</th>
+        </tr>
+        <tr>
+            <td><img src="https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg" class="team-logo"> Arsenal</td>
+            <td><img src="https://upload.wikimedia.org/wikipedia/en/c/cc/Chelsea_FC.svg" class="team-logo"> Chelsea</td>
+            <td class="W">W</td>
+        </tr>
+        <tr>
+            <td><img src="https://upload.wikimedia.org/wikipedia/en/7/7c/Manchester_United_FC_crest.svg" class="team-logo"> Man Utd</td>
+            <td><img src="https://upload.wikimedia.org/wikipedia/en/f/fc/Liverpool_FC.svg" class="team-logo"> Liverpool</td>
+            <td class="L">L</td>
+        </tr>
+        <tr>
+            <td><img src="https://upload.wikimedia.org/wikipedia/en/0/0c/Manchester_City_FC_badge.svg" class="team-logo"> Man City</td>
+            <td><img src="https://upload.wikimedia.org/wikipedia/en/e/eb/FC_Barcelona_%28crest%29.svg" class="team-logo"> Barcelona</td>
+            <td class="D">D</td>
+        </tr>
+        <tr>
+            <td><img src="https://upload.wikimedia.org/wikipedia/en/6/6c/Real_Madrid_CF.svg" class="team-logo"> Real Madrid</td>
+            <td><img src="https://upload.wikimedia.org/wikipedia/en/4/47/Atletico_Madrid_2017_logo.svg" class="team-logo"> Atletico Madrid</td>
+            <td class="W">W</td>
+        </tr>
+    </table>
 
-    // Premier League upcoming matches API
-    const apiURL = 'https://www.thesportsdb.com/api/v1/json/1/eventsnextleague.php?id=4328';
-
-    // Function to color W/D/L
-    function colorForm(result) {
-      if(result === 'W') return '<span style="color:green;font-weight:bold;">W</span>';
-      if(result === 'D') return '<span style="color:orange;font-weight:bold;">D</span>';
-      return '<span style="color:red;font-weight:bold;">L</span>';
-    }
-
-    fetch(apiURL)
-      .then(response => response.json())
-      .then(data => {
-        const events = data.events;
-        events.forEach(async event => {
-          const row = document.createElement('tr');
-
-          // Team logos
-          const homeLogo = event.strHomeTeamBadge || '';
-          const awayLogo = event.strAwayTeamBadge || '';
-
-          // Fetch last 5 matches for home team
-          const homeStatsResp = await fetch(`https://www.thesportsdb.com/api/v1/json/1/eventslast.php?id=${event.idHomeTeam}`);
-          const homeStatsData = await homeStatsResp.json();
-          const homeLast5 = homeStatsData.results.slice(0,5).map(e => {
-            if(e.intHomeScore > e.intAwayScore) return colorForm('W');
-            if(e.intHomeScore === e.intAwayScore) return colorForm('D');
-            return colorForm('L');
-          }).join(' ');
-
-          // Fetch last 5 matches for away team
-          const awayStatsResp = await fetch(`https://www.thesportsdb.com/api/v1/json/1/eventslast.php?id=${event.idAwayTeam}`);
-          const awayStatsData = await awayStatsResp.json();
-          const awayLast5 = awayStatsData.results.slice(0,5).map(e => {
-            if(e.intAwayScore > e.intHomeScore) return colorForm('W');
-            if(e.intAwayScore === e.intHomeScore) return colorForm('D');
-            return colorForm('L');
-          }).join(' ');
-
-          row.innerHTML = `
-            <td>${event.dateEvent}</td>
-            <td>${event.strTime}</td>
-            <td>
-              <img src="${homeLogo}" width="30"> ${event.strHomeTeam} <br>
-              Form: ${homeLast5}
-            </td>
-            <td>
-              <img src="${awayLogo}" width="30"> ${event.strAwayTeam} <br>
-              Form: ${awayLast5}
-            </td>
-            <td>
-              ${event.strLeague} <br>
-              <a href="https://www.betway.com/sports" target="_blank">Visit Betting Site</a>
-            </td>
-          `;
-          tableBody.appendChild(row);
-        });
-      })
-      .catch(err => {
-        tableBody.innerHTML = `<tr><td colspan="5">Error loading matches. Try again later.</td></tr>`;
-        console.error(err);
-      });
-  </script>
+    <p style="text-align:center;">Your live site: <a href="https://kiptoo123-sketch.github.io/sports-website/" target="_blank">https://kiptoo123-sketch.github.io/sports-website/</a></p>
 </body>
 </html>
