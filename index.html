@@ -2,59 +2,155 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Top Picks</title>
+  <title>Football Betting Demo</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    .match { border:1px solid #ccc; padding:10px; margin:10px 0; border-radius:5px; }
-    button { padding:5px 10px; background:#28a745; color:white; border:none; border-radius:3px; cursor:pointer; }
-    button:hover { background:#218838; }
+    body { font-family: Arial, sans-serif; padding: 20px; background:#f4f4f4; }
+    h2 { color: #333; }
+    .match { border:1px solid #ccc; padding:10px; margin:10px 0; border-radius:5px; background:white; display:flex; align-items:center; flex-wrap: wrap; }
+    .match.live { border-color: #e74c3c; background: #ffe6e6; }
+    .logo { width:40px; height:40px; margin:0 10px; }
+    .teams { flex:1; }
+    .odds button { padding:5px 10px; margin:3px; background:#007bff; color:white; border:none; border-radius:3px; cursor:pointer; }
+    .odds button:hover { background:#0056b3; }
+    .countdown { font-weight:bold; color:#e67e22; }
   </style>
 </head>
 <body>
 
+<h2>Live Matches</h2>
+<div id="live">Loading live matches...</div>
+
 <h2>Upcoming Matches</h2>
-<div id="matches">Loading matches...</div>
+<div id="upcoming">Loading upcoming matches...</div>
+
+<h2>Finished Matches / Results</h2>
+<div id="results">Loading results...</div>
 
 <script>
-const url = "https://v3.football.api-sports.io/fixtures?next=5";
+const API_KEY = "50f522f5ff34de0a7224a773578c6509";
 
-fetch(url, {
-  headers: {
-    "x-apisports-key": "50f522f5ff34de0a7224a773578c6509"
-  }
+// Helper to format date & time
+function formatTime(utcDate) {
+  const dateUTC = new Date(utcDate);
+  return dateUTC.toLocaleString("en-KE", {
+    timeZone: "Africa/Nairobi",
+    hour: "2-digit",
+    minute: "2-digit",
+    weekday: "short",
+    month: "short",
+    day: "numeric"
+  });
+}
+
+// Save user prediction
+function predict(option, fixtureId) {
+  let predictions = JSON.parse(localStorage.getItem("predictions") || "{}");
+  predictions[fixtureId] = option;
+  localStorage.setItem("predictions", JSON.stringify(predictions));
+  alert("Prediction saved: " + option);
+}
+
+// ------------------ Live Matches ------------------
+fetch("https://v3.football.api-sports.io/fixtures?live=all", {
+  headers: { "x-apisports-key": API_KEY }
 })
 .then(res => res.json())
 .then(data => {
-  const container = document.getElementById("matches");
+  const container = document.getElementById("live");
+  container.innerHTML = "";
+  if(data.response.length === 0){
+    container.innerText = "No live matches currently.";
+  } else {
+    data.response.forEach(match => {
+      container.innerHTML += `
+        <div class="match live">
+          <img src="${match.teams.home.logo}" class="logo">
+          <div class="teams"><strong>${match.teams.home.name}</strong> vs <strong>${match.teams.away.name}</strong></div>
+          <img src="${match.teams.away.logo}" class="logo"><br>
+          🕒 ${formatTime(match.fixture.date)} | Status: ${match.fixture.status.long}
+          <div class="odds">
+            <button onclick="predict('home', ${match.fixture.id})">Home Win</button>
+            <button onclick="predict('draw', ${match.fixture.id})">Draw</button>
+            <button onclick="predict('away', ${match.fixture.id})">Away Win</button>
+          </div>
+        </div>
+      `;
+    });
+  }
+})
+.catch(err => { document.getElementById("live").innerText = "Error loading live matches"; console.error(err); });
+
+// ------------------ Upcoming Matches ------------------
+fetch("https://v3.football.api-sports.io/fixtures?next=5", {
+  headers: { "x-apisports-key": API_KEY }
+})
+.then(res => res.json())
+.then(data => {
+  const container = document.getElementById("upcoming");
   container.innerHTML = "";
 
   data.response.forEach(match => {
     const dateUTC = new Date(match.fixture.date);
-    const localTime = dateUTC.toLocaleString("en-KE", {
-      timeZone: "Africa/Nairobi",
-      hour: "2-digit",
-      minute: "2-digit",
-      weekday: "short",
-      month: "short",
-      day: "numeric"
-    });
+    const countdown = () => {
+      const now = new Date();
+      const diff = dateUTC - now;
+      if(diff <= 0) return "Kickoff now!";
+      const hours = Math.floor(diff/1000/60/60);
+      const minutes = Math.floor((diff/1000/60)%60);
+      const seconds = Math.floor((diff/1000)%60);
+      return `${hours}h ${minutes}m ${seconds}s`;
+    }
 
-    container.innerHTML += `
-      <div class="match">
-        <strong>${match.teams.home.name} vs ${match.teams.away.name}</strong><br>
-        🕒 Kickoff: ${localTime}<br>
-        Pick: Home Win<br>
-        Odds: 2.10<br>
-        <button>Bet Now</button>
+    const matchDiv = document.createElement("div");
+    matchDiv.className = "match";
+    matchDiv.innerHTML = `
+      <img src="${match.teams.home.logo}" class="logo">
+      <div class="teams"><strong>${match.teams.home.name}</strong> vs <strong>${match.teams.away.name}</strong></div>
+      <img src="${match.teams.away.logo}" class="logo"><br>
+      🕒 Kickoff: ${formatTime(match.fixture.date)} | ⏱ Countdown: <span class="countdown">${countdown()}</span>
+      <div class="odds">
+        <button onclick="predict('home', ${match.fixture.id})">Home Win</button>
+        <button onclick="predict('draw', ${match.fixture.id})">Draw</button>
+        <button onclick="predict('away', ${match.fixture.id})">Away Win</button>
       </div>
     `;
+    container.appendChild(matchDiv);
+
+    const countdownSpan = matchDiv.querySelector(".countdown");
+    setInterval(()=> { countdownSpan.innerText = countdown(); }, 1000);
   });
 })
-.catch(err => {
-  document.getElementById("matches").innerText = "Error loading matches";
-  console.error(err);
-});
-</script>
+.catch(err => { document.getElementById("upcoming").innerText = "Error loading upcoming matches"; console.error(err); });
 
+// ------------------ Finished Matches ------------------
+const yesterday = new Date();
+yesterday.setDate(yesterday.getDate() - 1);
+const yDate = yesterday.toISOString().split("T")[0];
+
+fetch(`https://v3.football.api-sports.io/fixtures?date=${yDate}`, {
+  headers: { "x-apisports-key": API_KEY }
+})
+.then(res => res.json())
+.then(data => {
+  const container = document.getElementById("results");
+  container.innerHTML = "";
+  if(data.response.length === 0){
+    container.innerText = "No finished matches for yesterday.";
+  } else {
+    data.response.forEach(match => {
+      container.innerHTML += `
+        <div class="match">
+          <img src="${match.teams.home.logo}" class="logo">
+          <div class="teams"><strong>${match.teams.home.name}</strong> ${match.goals.home} - ${match.goals.away} <strong>${match.teams.away.name}</strong></div>
+          <img src="${match.teams.away.logo}" class="logo"><br>
+          Status: ${match.fixture.status.long}
+        </div>
+      `;
+    });
+  }
+})
+.catch(err => { document.getElementById("results").innerText = "Error loading results"; console.error(err); });
+
+</script>
 </body>
 </html>
