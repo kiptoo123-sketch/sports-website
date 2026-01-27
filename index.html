@@ -6,13 +6,14 @@
 <title>Betika-Style Predictor</title>
 <style>
   body { font-family: Arial, sans-serif; padding: 20px; background:#f9f9f9; }
-  h1 { text-align:center; }
+  h1, h2 { text-align:center; }
   button { margin:5px; padding:8px 12px; cursor:pointer; }
   #matches, #leaderboard { margin-top:20px; }
   table { width:100%; border-collapse: collapse; margin-top:10px; }
   th, td { border:1px solid #ccc; padding:8px; text-align:center; }
   th { background:#eee; }
   select { padding:5px; }
+  small { color:#555; }
 </style>
 </head>
 <body>
@@ -30,7 +31,7 @@
   <h2>Matches</h2>
   <table id="matches-table">
     <thead>
-      <tr><th>Match</th><th>Prediction</th><th>Action</th></tr>
+      <tr><th>League</th><th>Match</th><th>Prediction</th><th>Action</th></tr>
     </thead>
     <tbody></tbody>
   </table>
@@ -48,134 +49,156 @@
 
 <!-- Firebase SDK -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.2/firebase-app.js";
-  import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.6.2/firebase-auth.js";
-  import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.6.2/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.2/firebase-app.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.6.2/firebase-auth.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.6.2/firebase-firestore.js";
 
-  // Firebase config
-  const firebaseConfig = {
-    apiKey: "AIzaSyDyqTVq8hDjWatJBG4uVgTGaPA6TZ5yA_s",
-    authDomain: "betika-style-predictor.firebaseapp.com",
-    projectId: "betika-style-predictor",
-    storageBucket: "betika-style-predictor.firebasestorage.app",
-    messagingSenderId: "1081822274358",
-    appId: "1:1081822274358:web:cfd0d79f9d1c6e5fd68997"
-  };
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyDyqTVq8hDjWatJBG4uVgTGaPA6TZ5yA_s",
+  authDomain: "betika-style-predictor.firebaseapp.com",
+  projectId: "betika-style-predictor",
+  storageBucket: "betika-style-predictor.firebasestorage.app",
+  messagingSenderId: "1081822274358",
+  appId: "1:1081822274358:web:cfd0d79f9d1c6e5fd68997"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-  const provider = new GoogleAuthProvider();
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
 
-  // DOM Elements
-  const loginBtn = document.getElementById("login-btn");
-  const logoutBtn = document.getElementById("logout-btn");
-  const userInfo = document.getElementById("user-info");
-  const matchesTableBody = document.querySelector("#matches-table tbody");
-  const leaderboardBody = document.querySelector("#leaderboard-table tbody");
+// DOM Elements
+const loginBtn = document.getElementById("login-btn");
+const logoutBtn = document.getElementById("logout-btn");
+const userInfo = document.getElementById("user-info");
+const matchesTableBody = document.querySelector("#matches-table tbody");
+const leaderboardBody = document.querySelector("#leaderboard-table tbody");
 
-  let currentUser = null;
+let currentUser = null;
 
-  // Fetch live matches from TheSportsDB
-  async function loadMatches() {
-    try {
-      const res = await fetch("https://www.thesportsdb.com/api/v1/json/1/eventsnextleague.php?id=4328");
+// League list
+const leagues = [
+  { name: "Premier League", id: 4328 },
+  { name: "La Liga", id: 4335 },
+  { name: "Bundesliga", id: 4331 },
+  { name: "Serie A", id: 4332 },
+  { name: "Ligue 1", id: 4334 }
+];
+
+// Load matches from all leagues
+async function loadMatches() {
+  try {
+    matchesTableBody.innerHTML = "<tr><td colspan='4'>Loading matches...</td></tr>";
+    let allMatches = [];
+
+    for (const league of leagues) {
+      const res = await fetch("https://api.allorigins.win/raw?url=" +
+        encodeURIComponent(
+          `https://www.thesportsdb.com/api/v1/json/50f522f5ff34de0a7224a773578c6509/eventsnextleague.php?id=${league.id}`
+        )
+      );
       const data = await res.json();
-      const matches = data.events.map((event, index) => ({
-        id: index+1,
-        teams: `${event.strHomeTeam} vs ${event.strAwayTeam}`,
-        date: event.dateEvent,
-        time: event.strTime
-      }));
-      displayMatches(matches);
-    } catch (err) {
-      console.error("Error loading matches:", err);
-      matchesTableBody.innerHTML = "<tr><td colspan='3'>Failed to load matches.</td></tr>";
+      if(data.events) {
+        const leagueMatches = data.events.map((event,index) => ({
+          id: `${league.id}-${index+1}`,
+          league: league.name,
+          teams: `${event.strHomeTeam} vs ${event.strAwayTeam}`,
+          date: event.dateEvent,
+          time: event.strTime
+        }));
+        allMatches = allMatches.concat(leagueMatches);
+      }
     }
+
+    displayMatches(allMatches);
+
+  } catch(err) {
+    console.error("Error loading matches:", err);
+    matchesTableBody.innerHTML = "<tr><td colspan='4'>Failed to load matches.</td></tr>";
   }
+}
 
-  function displayMatches(matches) {
-    matchesTableBody.innerHTML = "";
-    matches.forEach(match => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${match.teams} <br> <small>${match.date} ${match.time}</small></td>
-        <td>
-          <select id="pred-${match.id}">
-            <option value="">Select</option>
-            <option value="Home">Home</option>
-            <option value="Draw">Draw</option>
-            <option value="Away">Away</option>
-          </select>
-        </td>
-        <td><button onclick="submitPrediction(${match.id}, '${match.teams}')">Predict</button></td>
-      `;
-      matchesTableBody.appendChild(tr);
-    });
-  }
+function displayMatches(matches) {
+  matchesTableBody.innerHTML = "";
+  matches.forEach(match => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${match.league}</td>
+      <td>${match.teams}<br><small>${match.date} ${match.time}</small></td>
+      <td>
+        <select id="pred-${match.id}">
+          <option value="">Select</option>
+          <option value="Home">Home</option>
+          <option value="Draw">Draw</option>
+          <option value="Away">Away</option>
+        </select>
+      </td>
+      <td><button onclick="submitPrediction('${match.id}', '${match.teams}')">Predict</button></td>
+    `;
+    matchesTableBody.appendChild(tr);
+  });
+}
 
-  // Submit prediction
-  window.submitPrediction = async (matchId, matchName) => {
-    if(!currentUser) return alert("Login first!");
-    const select = document.getElementById(`pred-${matchId}`);
-    const prediction = select.value;
-    if(!prediction) return alert("Select a prediction");
+// Submit prediction
+window.submitPrediction = async (matchId, matchName) => {
+  if(!currentUser) return alert("Login first!");
+  const select = document.getElementById(`pred-${matchId}`);
+  const prediction = select.value;
+  if(!prediction) return alert("Select a prediction");
 
-    await addDoc(collection(db, "predictions"), {
-      user: currentUser.displayName,
-      matchId,
-      matchName,
-      prediction,
-      timestamp: Date.now()
-    });
-
-    alert("Prediction saved!");
-  };
-
-  // Display leaderboard
-  function displayLeaderboard(data) {
-    leaderboardBody.innerHTML = "";
-    data.forEach(item => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${item.user}</td><td>${item.points}</td>`;
-      leaderboardBody.appendChild(tr);
-    });
-  }
-
-  // Listen to Firestore and update leaderboard
-  const q = query(collection(db, "predictions"), orderBy("timestamp", "desc"));
-  onSnapshot(q, snapshot => {
-    const leaderboardMap = {};
-    snapshot.docs.forEach(doc => {
-      const data = doc.data();
-      leaderboardMap[data.user] = (leaderboardMap[data.user] || 0) + 1;
-    });
-    const leaderboardData = Object.keys(leaderboardMap).map(u => ({ user:u, points:leaderboardMap[u] }));
-    displayLeaderboard(leaderboardData);
+  await addDoc(collection(db, "predictions"), {
+    user: currentUser.displayName,
+    matchId,
+    matchName,
+    prediction,
+    timestamp: Date.now()
   });
 
-  // Login
-  loginBtn.onclick = () => signInWithPopup(auth, provider).catch(err => alert(err.message));
+  alert("Prediction saved!");
+};
 
-  // Logout
-  logoutBtn.onclick = () => signOut(auth);
-
-  // Auth state
-  onAuthStateChanged(auth, user => {
-    currentUser = user;
-    if(user){
-      loginBtn.style.display = "none";
-      logoutBtn.style.display = "inline-block";
-      userInfo.innerHTML = `Logged in as <b>${user.displayName}</b>`;
-    } else {
-      loginBtn.style.display = "inline-block";
-      logoutBtn.style.display = "none";
-      userInfo.innerHTML = "";
-    }
+// Leaderboard
+function displayLeaderboard(data) {
+  leaderboardBody.innerHTML = "";
+  data.forEach(item => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${item.user}</td><td>${item.points}</td>`;
+    leaderboardBody.appendChild(tr);
   });
+}
 
-  // Load matches on page load
-  loadMatches();
+// Listen to Firestore updates
+const q = query(collection(db, "predictions"), orderBy("timestamp","desc"));
+onSnapshot(q, snapshot => {
+  const leaderboardMap = {};
+  snapshot.docs.forEach(doc => {
+    const data = doc.data();
+    leaderboardMap[data.user] = (leaderboardMap[data.user] || 0) + 1;
+  });
+  const leaderboardData = Object.keys(leaderboardMap).map(u => ({ user:u, points:leaderboardMap[u] }));
+  displayLeaderboard(leaderboardData);
+});
+
+// Auth
+loginBtn.onclick = () => signInWithPopup(auth, provider).catch(err=>alert(err.message));
+logoutBtn.onclick = () => signOut(auth);
+
+onAuthStateChanged(auth, user => {
+  currentUser = user;
+  if(user){
+    loginBtn.style.display = "none";
+    logoutBtn.style.display = "inline-block";
+    userInfo.innerHTML = `Logged in as <b>${user.displayName}</b>`;
+  } else {
+    loginBtn.style.display = "inline-block";
+    logoutBtn.style.display = "none";
+    userInfo.innerHTML = "";
+  }
+});
+
+// Load matches
+loadMatches();
 
 </script>
 
