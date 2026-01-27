@@ -1,171 +1,204 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Betika-style Football Matches</title>
-<style>
-body { font-family: Arial, sans-serif; background:#f4f4f4; margin:0; padding:20px; }
-h2 { color:#333; display:flex; justify-content:space-between; align-items:center; }
-#refresh { padding:5px 10px; cursor:pointer; background:#27ae60; color:white; border:none; border-radius:3px; }
-#refresh:hover { background:#1e8449; }
-.match { background:white; border:1px solid #ccc; border-radius:5px; margin:10px 0; padding:10px; display:flex; align-items:center; flex-wrap:wrap; }
-.match.live { border-color:#e74c3c; background:#ffe6e6; }
-.logo { width:40px; height:40px; margin:0 10px; }
-.teams { flex:1; display:flex; justify-content:space-between; align-items:center; }
-.odds button { padding:5px 10px; margin:3px; background:#007bff; color:white; border:none; border-radius:3px; cursor:pointer; }
-.odds button:hover { background:#0056b3; }
-.countdown { font-weight:bold; color:#e67e22; }
-.league { font-size:0.9em; color:#555; margin-bottom:5px; }
-#predictions { background:white; padding:10px; border-radius:5px; border:1px solid #ccc; margin-top:10px; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Betika-style Predictor</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background: #1e3a8a;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+
+    header button {
+      margin-left: 10px;
+      padding: 8px 12px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    main {
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 0 15px;
+    }
+
+    section {
+      background: white;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      margin-top: 0;
+    }
+
+    #matches-list button {
+      margin-top: 5px;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+
+    footer {
+      text-align: center;
+      padding: 10px;
+      background: #1e3a8a;
+      color: white;
+    }
+  </style>
 </head>
 <body>
+  <header>
+    <h1>⚽ Betika-style Predictor</h1>
+    <button id="login-btn">Login with Google</button>
+    <button id="logout-btn" hidden>Logout</button>
+  </header>
 
-<h2>Live Matches <button id="refresh" onclick="loadMatches()">Refresh</button></h2>
-<div id="live">Loading live matches...</div>
+  <main>
+    <section id="matches">
+      <h2>Upcoming Matches</h2>
+      <div id="matches-list">Loading matches...</div>
+    </section>
 
-<h2>Upcoming Matches</h2>
-<div id="upcoming">Loading upcoming matches...</div>
+    <section id="predictions">
+      <h2>Your Predictions</h2>
+      <div id="user-predictions">No predictions yet.</div>
+    </section>
 
-<h2>Finished Matches / Results</h2>
-<div id="results">Loading results...</div>
+    <section id="leaderboard">
+      <h2>Leaderboard</h2>
+      <ol id="leaderboard-list">
+        <li>Loading...</li>
+      </ol>
+    </section>
+  </main>
 
-<h2>Your Predictions</h2>
-<div id="predictions">You have not made any predictions yet.</div>
+  <footer>
+    <p>Powered by Firebase & GitHub Pages</p>
+  </footer>
 
-<script>
-const API_KEY = "50f522f5ff34de0a7224a773578c6509";
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, onSnapshot, query } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
-// Format UTC date to local readable string
-function formatTime(utcDate){
-  const dateUTC = new Date(utcDate);
-  return dateUTC.toLocaleString("en-KE", { timeZone: "Africa/Nairobi", hour:"2-digit", minute:"2-digit", weekday:"short", month:"short", day:"numeric" });
-}
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDyqTVq8hDjWatJBG4uVgTGaPA6TZ5yA_s",
+      authDomain: "betika-style-predictor.firebaseapp.com",
+      projectId: "betika-style-predictor",
+      storageBucket: "betika-style-predictor.firebasestorage.app",
+      messagingSenderId: "1081822274358",
+      appId: "1:1081822274358:web:cfd0d79f9d1c6e5fd68997"
+    };
 
-// User Predictions
-function displayPredictions() {
-  const preds = JSON.parse(localStorage.getItem("predictions")||"{}");
-  const container = document.getElementById("predictions");
-  if(Object.keys(preds).length===0){
-    container.innerText = "You have not made any predictions yet.";
-  } else {
-    container.innerHTML = "";
-    for(const [fixtureId, choice] of Object.entries(preds)){
-      container.innerHTML += `<div>Match ID ${fixtureId}: <strong>${choice}</strong></div>`;
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    // DOM elements
+    const loginBtn = document.getElementById("login-btn");
+    const logoutBtn = document.getElementById("logout-btn");
+    const matchesList = document.getElementById("matches-list");
+    const userPredictions = document.getElementById("user-predictions");
+    const leaderboardList = document.getElementById("leaderboard-list");
+
+    // Example matches (replace with real API later)
+    const matches = [
+      { id: "m1", home: "Team A", away: "Team B", time: "Today 18:00" },
+      { id: "m2", home: "Team C", away: "Team D", time: "Today 20:00" },
+    ];
+
+    function displayMatches() {
+      matchesList.innerHTML = "";
+      matches.forEach(match => {
+        const div = document.createElement("div");
+        div.innerHTML = `
+          <strong>${match.home} vs ${match.away}</strong> - ${match.time}
+          <br>
+          <button onclick="predict('${match.id}')">Predict Win</button>
+        `;
+        matchesList.appendChild(div);
+      });
     }
-  }
-}
 
-// Save user prediction
-function predict(option, fixtureId){
-  let predictions = JSON.parse(localStorage.getItem("predictions")||"{}");
-  predictions[fixtureId] = option;
-  localStorage.setItem("predictions", JSON.stringify(predictions));
-  displayPredictions();
-}
+    loginBtn.addEventListener("click", () => signInWithPopup(auth, provider));
+    logoutBtn.addEventListener("click", () => signOut(auth));
 
-// Fetch odds for fixture
-function fetchOdds(fixtureId){
-  fetch(`https://v3.football.api-sports.io/odds?fixture=${fixtureId}`, { headers:{ "x-apisports-key": API_KEY } })
-    .then(res=>res.json())
-    .then(data=>{
-      const odds = data.response[0]?.bookmakers[0]?.bets[0]?.values;
-      if(odds){
-        document.getElementById(`home-${fixtureId}`).innerText = `Home ${odds[0].odd}`;
-        document.getElementById(`draw-${fixtureId}`).innerText = `Draw ${odds[1].odd}`;
-        document.getElementById(`away-${fixtureId}`).innerText = `Away ${odds[2].odd}`;
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        loginBtn.hidden = true;
+        logoutBtn.hidden = false;
+        displayMatches();
+        loadPredictions(user.uid);
+        loadLeaderboard();
+      } else {
+        loginBtn.hidden = false;
+        logoutBtn.hidden = true;
+        matchesList.innerHTML = "Please login to see matches.";
+        userPredictions.innerHTML = "No predictions yet.";
+        leaderboardList.innerHTML = "<li>Login to see leaderboard</li>";
       }
-    }).catch(err=>console.warn(`No odds for fixture ${fixtureId}`, err));
-}
+    });
 
-// Render Match
-function renderMatch(container, match, type="upcoming"){
-  const fixtureId = match.fixture.id;
-  const leagueName = match.league.name;
-  const countryName = match.league.country;
+    window.predict = async function(matchId) {
+      const user = auth.currentUser;
+      if (!user) return alert("Login first");
 
-  const dateUTC = new Date(match.fixture.date);
-  const countdown = () => {
-    const now = new Date();
-    const diff = dateUTC - now;
-    if(diff<=0) return "Kickoff now!";
-    const hours = Math.floor(diff/1000/60/60);
-    const minutes = Math.floor((diff/1000/60)%60);
-    const seconds = Math.floor((diff/1000)%60);
-    return `${hours}h ${minutes}m ${seconds}s`;
-  }
+      const score = prompt("Enter your predicted score (e.g., 2-1):");
+      if (!score) return;
 
-  const matchDiv = document.createElement("div");
-  matchDiv.className = "match";
-  if(type==="live") matchDiv.classList.add("live");
+      await addDoc(collection(db, "predictions"), {
+        userId: user.uid,
+        matchId,
+        score,
+        timestamp: Date.now()
+      });
 
-  matchDiv.innerHTML = `
-    <div class="league"><strong>${leagueName}</strong> (${countryName})</div>
-    <div class="teams">
-      <img src="${match.teams.home.logo}" class="logo">
-      <strong>${match.teams.home.name}</strong>
-      vs
-      <strong>${match.teams.away.name}</strong>
-      <img src="${match.teams.away.logo}" class="logo">
-    </div>
-    🕒 Kickoff: ${formatTime(match.fixture.date)}
-    ${type==="upcoming"? '| ⏱ Countdown: <span class="countdown">'+countdown()+'</span>':''}
-    ${type==="results"? '| Score: '+match.goals.home+'-'+match.goals.away:''}
-    <div class="odds">
-      <button id="home-${fixtureId}" onclick="predict('home', ${fixtureId})">Home 2.5</button>
-      <button id="draw-${fixtureId}" onclick="predict('draw', ${fixtureId})">Draw 3.1</button>
-      <button id="away-${fixtureId}" onclick="predict('away', ${fixtureId})">Away 2.8</button>
-    </div>
-  `;
-  container.appendChild(matchDiv);
+      loadPredictions(user.uid);
+      alert("Prediction saved!");
+    };
 
-  if(type==="upcoming"){
-    const countdownSpan = matchDiv.querySelector(".countdown");
-    setInterval(()=>{ countdownSpan.innerText = countdown(); }, 1000);
-  }
+    async function loadPredictions(uid) {
+      const snapshot = await getDocs(collection(db, "predictions"));
+      const userDocs = snapshot.docs.filter(d => d.data().userId === uid);
+      userPredictions.innerHTML = userDocs.length 
+        ? "<ul>" + userDocs.map(d => `<li>${d.data().matchId}: ${d.data().score}</li>`).join("") + "</ul>" 
+        : "No predictions yet.";
+    }
 
-  fetchOdds(fixtureId);
-}
-
-// ------------------ Load Matches ------------------
-function loadMatches(){
-  displayPredictions();
-
-  // Live matches
-  fetch("https://v3.football.api-sports.io/fixtures?live=all", { headers:{ "x-apisports-key": API_KEY } })
-    .then(res=>res.json())
-    .then(data=>{
-      const container = document.getElementById("live");
-      container.innerHTML="";
-      if(data.response.length===0) container.innerText="No live matches currently.";
-      else data.response.forEach(match=>renderMatch(container, match, "live"));
-    }).catch(err=>{ document.getElementById("live").innerText="Error loading live matches"; console.error(err); });
-
-  // Upcoming matches (next 20)
-  fetch("https://v3.football.api-sports.io/fixtures?next=20", { headers:{ "x-apisports-key": API_KEY } })
-    .then(res=>res.json())
-    .then(data=>{
-      const container = document.getElementById("upcoming");
-      container.innerHTML="";
-      data.response.forEach(match=>renderMatch(container, match, "upcoming"));
-    }).catch(err=>{ document.getElementById("upcoming").innerText="Error loading upcoming matches"; console.error(err); });
-
-  // Finished matches (yesterday)
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate()-1);
-  const yDate = yesterday.toISOString().split("T")[0];
-  fetch(`https://v3.football.api-sports.io/fixtures?date=${yDate}`, { headers:{ "x-apisports-key": API_KEY } })
-    .then(res=>res.json())
-    .then(data=>{
-      const container = document.getElementById("results");
-      container.innerHTML="";
-      if(data.response.length===0) container.innerText="No finished matches for yesterday.";
-      else data.response.forEach(match=>renderMatch(container, match, "results"));
-    }).catch(err=>{ document.getElementById("results").innerText="Error loading results"; console.error(err); });
-}
-
-// Initial load
-loadMatches();
-</script>
+    function loadLeaderboard() {
+      const predictionsCol = collection(db, "predictions");
+      const q = query(predictionsCol);
+      onSnapshot(q, snapshot => {
+        const counts = {};
+        snapshot.docs.forEach(doc => {
+          const data = doc.data();
+          counts[data.userId] = (counts[data.userId] || 0) + 1;
+        });
+        leaderboardList.innerHTML = "";
+        Object.entries(counts)
+          .sort((a,b) => b[1]-a[1])
+          .forEach(([uid, score]) => {
+            const li = document.createElement("li");
+            li.textContent = `User: ${uid} - Predictions: ${score}`;
+            leaderboardList.appendChild(li);
+          });
+      });
+    }
+  </script>
 </body>
 </html>
