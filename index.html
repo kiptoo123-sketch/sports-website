@@ -13,6 +13,7 @@
     .odds button { padding:5px 10px; margin:3px; background:#007bff; color:white; border:none; border-radius:3px; cursor:pointer; }
     .odds button:hover { background:#0056b3; }
     .countdown { font-weight:bold; color:#e67e22; }
+    #predictions { background:white; padding:10px; border-radius:5px; border:1px solid #ccc; margin-top:10px; }
   </style>
 </head>
 <body>
@@ -26,10 +27,13 @@
 <h2>Finished Matches / Results</h2>
 <div id="results">Loading results...</div>
 
+<h2>Your Predictions</h2>
+<div id="predictions">You have not made any predictions yet.</div>
+
 <script>
 const API_KEY = "50f522f5ff34de0a7224a773578c6509";
 
-// Helper to format date & time
+// Format UTC date to readable time
 function formatTime(utcDate) {
   const dateUTC = new Date(utcDate);
   return dateUTC.toLocaleString("en-KE", {
@@ -42,12 +46,26 @@ function formatTime(utcDate) {
   });
 }
 
+// Display user predictions
+function displayPredictions() {
+  const preds = JSON.parse(localStorage.getItem("predictions") || "{}");
+  const container = document.getElementById("predictions");
+  if(Object.keys(preds).length === 0) {
+    container.innerText = "You have not made any predictions yet.";
+  } else {
+    container.innerHTML = "";
+    for(const [fixtureId, choice] of Object.entries(preds)) {
+      container.innerHTML += `<div>Match ID ${fixtureId}: <strong>${choice}</strong></div>`;
+    }
+  }
+}
+
 // Save user prediction
 function predict(option, fixtureId) {
   let predictions = JSON.parse(localStorage.getItem("predictions") || "{}");
   predictions[fixtureId] = option;
   localStorage.setItem("predictions", JSON.stringify(predictions));
-  alert("Prediction saved: " + option);
+  displayPredictions();
 }
 
 // ------------------ Live Matches ------------------
@@ -69,9 +87,9 @@ fetch("https://v3.football.api-sports.io/fixtures?live=all", {
           <img src="${match.teams.away.logo}" class="logo"><br>
           🕒 ${formatTime(match.fixture.date)} | Status: ${match.fixture.status.long}
           <div class="odds">
-            <button onclick="predict('home', ${match.fixture.id})">Home Win</button>
-            <button onclick="predict('draw', ${match.fixture.id})">Draw</button>
-            <button onclick="predict('away', ${match.fixture.id})">Away Win</button>
+            <button onclick="predict('home', ${match.fixture.id})">Home Win 2.5</button>
+            <button onclick="predict('draw', ${match.fixture.id})">Draw 3.1</button>
+            <button onclick="predict('away', ${match.fixture.id})">Away Win 2.8</button>
           </div>
         </div>
       `;
@@ -109,9 +127,9 @@ fetch("https://v3.football.api-sports.io/fixtures?next=5", {
       <img src="${match.teams.away.logo}" class="logo"><br>
       🕒 Kickoff: ${formatTime(match.fixture.date)} | ⏱ Countdown: <span class="countdown">${countdown()}</span>
       <div class="odds">
-        <button onclick="predict('home', ${match.fixture.id})">Home Win</button>
-        <button onclick="predict('draw', ${match.fixture.id})">Draw</button>
-        <button onclick="predict('away', ${match.fixture.id})">Away Win</button>
+        <button onclick="predict('home', ${match.fixture.id})">Home Win 2.5</button>
+        <button onclick="predict('draw', ${match.fixture.id})">Draw 3.1</button>
+        <button onclick="predict('away', ${match.fixture.id})">Away Win 2.8</button>
       </div>
     `;
     container.appendChild(matchDiv);
@@ -151,6 +169,9 @@ fetch(`https://v3.football.api-sports.io/fixtures?date=${yDate}`, {
 })
 .catch(err => { document.getElementById("results").innerText = "Error loading results"; console.error(err); });
 
+// Show predictions on page load
+displayPredictions();
 </script>
+
 </body>
 </html>
