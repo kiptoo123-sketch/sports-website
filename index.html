@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Betika-Style Predictor</title>
 <style>
-  body { font-family: Arial, sans-serif; margin: 20px; }
-  button { padding:5px 10px; cursor:pointer; margin-left:5px; }
-  table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-  th, td { border:1px solid #ccc; padding:10px; text-align:center; }
-  img { vertical-align: middle; }
+body { font-family: Arial, sans-serif; margin: 20px; }
+button { padding:5px 10px; cursor:pointer; margin-left:5px; }
+table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+th, td { border:1px solid #ccc; padding:10px; text-align:center; }
+img { vertical-align: middle; }
 </style>
 </head>
 <body>
@@ -24,21 +24,22 @@
 <!-- Matches -->
 <h2>Matches</h2>
 <table id="matches-table">
-  <tr><th>Match</th><th>Odds</th><th>Prediction</th><th>Action</th></tr>
+<tr><th>Match</th><th>Odds</th><th>Prediction</th><th>Action</th></tr>
 </table>
 
 <!-- Leaderboard -->
 <h2>Leaderboard</h2>
 <table id="leaderboard-table">
-  <tr><th>User</th><th>Points</th></tr>
+<tr><th>User</th><th>Points</th></tr>
 </table>
 
-<!-- Firebase -->
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 
 <script>
+// --- Firebase config ---
 const firebaseConfig = {
   apiKey: "AIzaSyDyqTVq8hDjWatJBG4uVgTGaPA6TZ5yA_s",
   authDomain: "betika-style-predictor.firebaseapp.com",
@@ -60,10 +61,8 @@ const userInfo = document.getElementById("user-info");
 const matchesTable = document.getElementById("matches-table");
 const leaderboardTable = document.getElementById("leaderboard-table");
 
-const apiKey = "50f522f5ff34de0a7224a773578c6509";
-
-// --- LOGIN ---
-loginBtn.onclick = () => auth.signInWithPopup(provider).catch(e => alert(e.message));
+// --- Login / Logout ---
+loginBtn.onclick = () => auth.signInWithPopup(provider).catch(e=>alert(e.message));
 logoutBtn.onclick = () => auth.signOut();
 
 auth.onAuthStateChanged(user => {
@@ -83,15 +82,15 @@ auth.onAuthStateChanged(user => {
   }
 });
 
-// --- LOAD MATCHES ---
+// --- Load Matches from Firebase Function ---
 async function loadMatches(){
   matchesTable.innerHTML = "<tr><th>Match</th><th>Odds</th><th>Prediction</th><th>Action</th></tr>";
   try {
+    // Replace with your deployed Firebase Function URL
+    const functionURL = "https://us-central1-your-project.cloudfunctions.net/getMatches";
     const leagues = [39, 140]; // EPL + La Liga
     for(const league of leagues){
-      const res = await fetch(`https://v3.football.api-sports.io/fixtures?league=${league}&season=2025`, {
-        headers: { "x-apisports-key": apiKey }
-      });
+      const res = await fetch(`${functionURL}?league=${league}&season=2025`);
       const data = await res.json();
       const fixtures = data.response;
 
@@ -99,11 +98,13 @@ async function loadMatches(){
         const row = matchesTable.insertRow();
         const home = f.teams.home.name;
         const away = f.teams.away.name;
+        const homeLogo = f.teams.home.logo || "";
+        const awayLogo = f.teams.away.logo || "";
 
-        // Logos + match
-        row.insertCell(0).innerHTML = `<img src="${f.teams.home.logo}" width="30"> ${home} vs <img src="${f.teams.away.logo}" width="30"> ${away}`;
+        // Match with logos
+        row.insertCell(0).innerHTML = `<img src="${homeLogo}" width="30"> ${home} vs <img src="${awayLogo}" width="30"> ${away}`;
 
-        // Odds (if your API plan provides them)
+        // Odds (placeholder if not returned)
         row.insertCell(1).innerHTML = `
           Home: ${f.odds?.home ?? "-"} | 
           Draw: ${f.odds?.draw ?? "-"} | 
@@ -118,7 +119,7 @@ async function loadMatches(){
           </select>`;
 
         // Submit button
-        row.insertCell(3).innerHTML = `<button onclick="submitPrediction('${f.fixture.id}', '${home} vs ${away}')">Submit</button>`;
+        row.insertCell(3).innerHTML = `<button onclick="submitPrediction('${f.fixture.id}','${home} vs ${away}')">Submit</button>`;
       });
     }
   } catch(e){
@@ -126,7 +127,7 @@ async function loadMatches(){
   }
 }
 
-// --- SUBMIT PREDICTION ---
+// --- Submit prediction ---
 function submitPrediction(fixtureId, matchName){
   const user = auth.currentUser;
   if(!user) return alert("Login first!");
@@ -141,13 +142,13 @@ function submitPrediction(fixtureId, matchName){
   .catch(e=> alert("Error: "+e.message));
 }
 
-// --- LOAD LEADERBOARD ---
+// --- Load leaderboard ---
 function loadLeaderboard(){
   db.collection("predictions").get().then(snapshot => {
     const pointsMap = {};
     snapshot.forEach(doc => {
       const data = doc.data();
-      pointsMap[data.user] = (pointsMap[data.user] || 0) + 1; // +1 point per prediction (placeholder)
+      pointsMap[data.user] = (pointsMap[data.user] || 0) + 1; // +1 per prediction
     });
 
     leaderboardTable.innerHTML = "<tr><th>User</th><th>Points</th></tr>";
