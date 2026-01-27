@@ -3,65 +3,124 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Firebase Google Login Test</title>
+<title>Betika-Style Predictor</title>
 <style>
-  body { font-family: Arial; text-align:center; margin-top:50px; }
-  button { padding:10px 20px; margin:10px; cursor:pointer; }
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  button { padding:10px 20px; margin:5px; cursor:pointer; }
+  table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+  th, td { border:1px solid #ccc; padding:10px; text-align:center; }
 </style>
 </head>
 <body>
 
-<h1>Firebase Google Login Test</h1>
+<h1>Betika-Style Predictor</h1>
 
+<!-- Login -->
 <button id="login-btn">Login with Google</button>
 <button id="logout-btn" style="display:none;">Logout</button>
+<div id="user-info" style="margin-top:10px;"></div>
 
-<div id="user-info" style="margin-top:20px;"></div>
+<!-- Matches -->
+<h2>Matches</h2>
+<table id="matches-table">
+  <tr><th>Match</th><th>Prediction</th><th>Action</th></tr>
+  <!-- Matches will appear here -->
+</table>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.2/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.6.2/firebase-auth.js";
+<!-- Leaderboard -->
+<h2>Leaderboard</h2>
+<table id="leaderboard-table">
+  <tr><th>User</th><th>Points</th></tr>
+  <!-- Leaderboard will appear here -->
+</table>
 
-// --- Firebase config ---
-const firebaseConfig = {
-  apiKey: "AIzaSyDyqTVq8hDjWatJBG4uVgTGaPA6TZ5yA_s",
-  authDomain: "betika-style-predictor.firebaseapp.com",
-  projectId: "betika-style-predictor",
-  storageBucket: "betika-style-predictor.firebasestorage.app",
-  messagingSenderId: "1081822274358",
-  appId: "1:1081822274358:web:cfd0d79f9d1c6e5fd68997"
-};
+<!-- Firebase Scripts -->
+<script src="https://www.gstatic.com/firebasejs/10.6.2/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.6.2/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.6.2/firebase-firestore.js"></script>
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
+<script>
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyDyqTVq8hDjWatJBG4uVgTGaPA6TZ5yA_s",
+    authDomain: "betika-style-predictor.firebaseapp.com",
+    projectId: "betika-style-predictor",
+    storageBucket: "betika-style-predictor.firebasestorage.app",
+    messagingSenderId: "1081822274358",
+    appId: "1:1081822274358:web:cfd0d79f9d1c6e5fd68997"
+  };
 
-const loginBtn = document.getElementById("login-btn");
-const logoutBtn = document.getElementById("logout-btn");
-const userInfo = document.getElementById("user-info");
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const provider = new firebase.auth.GoogleAuthProvider();
 
-let currentUser = null;
+  const loginBtn = document.getElementById("login-btn");
+  const logoutBtn = document.getElementById("logout-btn");
+  const userInfo = document.getElementById("user-info");
+  const matchesTable = document.getElementById("matches-table");
+  const leaderboardTable = document.getElementById("leaderboard-table");
 
-// Login
-loginBtn.onclick = () => signInWithPopup(auth, provider).catch(e => alert(e.message));
+  // Login/Logout
+  loginBtn.onclick = () => auth.signInWithPopup(provider).catch(e => alert(e.message));
+  logoutBtn.onclick = () => auth.signOut();
 
-// Logout
-logoutBtn.onclick = () => signOut(auth);
+  // Detect login state
+  auth.onAuthStateChanged(user => {
+      if(user){
+          loginBtn.style.display = "none";
+          logoutBtn.style.display = "inline-block";
+          userInfo.innerHTML = `Logged in as <b>${user.displayName}</b>`;
 
-// Detect login state
-onAuthStateChanged(auth, user => {
-    currentUser = user;
-    if(user){
-        loginBtn.style.display = "none";
-        logoutBtn.style.display = "inline-block";
-        userInfo.innerHTML = `Logged in as <b>${user.displayName}</b>`;
-    } else {
-        loginBtn.style.display = "inline-block";
-        logoutBtn.style.display = "none";
-        userInfo.innerHTML = "";
-    }
-});
+          // Load matches (placeholder)
+          loadMatches();
+
+          // Load leaderboard (placeholder)
+          loadLeaderboard();
+      } else {
+          loginBtn.style.display = "inline-block";
+          logoutBtn.style.display = "none";
+          userInfo.innerHTML = "";
+          matchesTable.innerHTML = `<tr><th>Match</th><th>Prediction</th><th>Action</th></tr>`;
+          leaderboardTable.innerHTML = `<tr><th>User</th><th>Points</th></tr>`;
+      }
+  });
+
+  // Placeholder matches
+  function loadMatches(){
+      const sampleMatches = [
+          "Liverpool vs Man City",
+          "Chelsea vs Arsenal",
+          "Barcelona vs Real Madrid"
+      ];
+      sampleMatches.forEach(match => {
+          const row = matchesTable.insertRow();
+          row.insertCell(0).innerText = match;
+          row.insertCell(1).innerHTML = `
+            <select>
+              <option value="1">Home</option>
+              <option value="X">Draw</option>
+              <option value="2">Away</option>
+            </select>`;
+          row.insertCell(2).innerHTML = `<button>Submit</button>`;
+      });
+  }
+
+  // Placeholder leaderboard
+  function loadLeaderboard(){
+      const sampleLeaderboard = [
+          { user: "Alice", points: 10 },
+          { user: "Bob", points: 8 },
+          { user: "Kelvin", points: 5 }
+      ];
+      sampleLeaderboard.forEach(entry => {
+          const row = leaderboardTable.insertRow();
+          row.insertCell(0).innerText = entry.user;
+          row.insertCell(1).innerText = entry.points;
+      });
+  }
+
 </script>
 
 </body>
