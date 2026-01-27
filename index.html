@@ -1,76 +1,60 @@
- 
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Sports Website</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f9f9f9;
-            margin: 20px;
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-        }
-        table {
-            width: 90%;
-            margin: 20px auto;
-            border-collapse: collapse;
-            background-color: #fff;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 12px;
-            text-align: center;
-        }
-        th {
-            background-color: #4CAF50;
-            color: white;
-        }
-        .W { color: green; font-weight: bold; }
-        .L { color: red; font-weight: bold; }
-        .D { color: gray; font-weight: bold; }
-        .team-logo {
-            width: 30px;
-            height: 30px;
-            vertical-align: middle;
-            margin-right: 5px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Top Picks</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .match { border:1px solid #ccc; padding:10px; margin:10px 0; border-radius:5px; }
+    button { padding:5px 10px; background:#28a745; color:white; border:none; border-radius:3px; cursor:pointer; }
+    button:hover { background:#218838; }
+  </style>
 </head>
 <body>
-    <h1>Upcoming Matches</h1>
 
-    <table>
-        <tr>
-            <th>Team 1</th>
-            <th>Team 2</th>
-            <th>Result</th>
-        </tr>
-        <tr>
-            <td><img src="https://upload.wikimedia.org/wikipedia/en/5/53/Arsenal_FC.svg" class="team-logo"> Arsenal</td>
-            <td><img src="https://upload.wikimedia.org/wikipedia/en/c/cc/Chelsea_FC.svg" class="team-logo"> Chelsea</td>
-            <td class="W">W</td>
-        </tr>
-        <tr>
-            <td><img src="https://upload.wikimedia.org/wikipedia/en/7/7c/Manchester_United_FC_crest.svg" class="team-logo"> Man Utd</td>
-            <td><img src="https://upload.wikimedia.org/wikipedia/en/f/fc/Liverpool_FC.svg" class="team-logo"> Liverpool</td>
-            <td class="L">L</td>
-        </tr>
-        <tr>
-            <td><img src="https://upload.wikimedia.org/wikipedia/en/0/0c/Manchester_City_FC_badge.svg" class="team-logo"> Man City</td>
-            <td><img src="https://upload.wikimedia.org/wikipedia/en/e/eb/FC_Barcelona_%28crest%29.svg" class="team-logo"> Barcelona</td>
-            <td class="D">D</td>
-        </tr>
-        <tr>
-            <td><img src="https://upload.wikimedia.org/wikipedia/en/6/6c/Real_Madrid_CF.svg" class="team-logo"> Real Madrid</td>
-            <td><img src="https://upload.wikimedia.org/wikipedia/en/4/47/Atletico_Madrid_2017_logo.svg" class="team-logo"> Atletico Madrid</td>
-            <td class="W">W</td>
-        </tr>
-    </table>
+<h2>Upcoming Matches</h2>
+<div id="matches">Loading matches...</div>
 
-    <p style="text-align:center;">Your live site: <a href="https://kiptoo123-sketch.github.io/sports-website/" target="_blank">https://kiptoo123-sketch.github.io/sports-website/</a></p>
+<script>
+const url = "https://v3.football.api-sports.io/fixtures?next=5";
+
+fetch(url, {
+  headers: {
+    "x-apisports-key": "50f522f5ff34de0a7224a773578c6509"
+  }
+})
+.then(res => res.json())
+.then(data => {
+  const container = document.getElementById("matches");
+  container.innerHTML = "";
+
+  data.response.forEach(match => {
+    const dateUTC = new Date(match.fixture.date);
+    const localTime = dateUTC.toLocaleString("en-KE", {
+      timeZone: "Africa/Nairobi",
+      hour: "2-digit",
+      minute: "2-digit",
+      weekday: "short",
+      month: "short",
+      day: "numeric"
+    });
+
+    container.innerHTML += `
+      <div class="match">
+        <strong>${match.teams.home.name} vs ${match.teams.away.name}</strong><br>
+        🕒 Kickoff: ${localTime}<br>
+        Pick: Home Win<br>
+        Odds: 2.10<br>
+        <button>Bet Now</button>
+      </div>
+    `;
+  });
+})
+.catch(err => {
+  document.getElementById("matches").innerText = "Error loading matches";
+  console.error(err);
+});
+</script>
+
 </body>
 </html>
