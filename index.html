@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -6,9 +6,10 @@
 <title>Betika-Style Predictor</title>
 <style>
   body { font-family: Arial, sans-serif; margin: 20px; }
-  button { padding:10px 20px; margin:5px; cursor:pointer; }
+  button { padding:5px 10px; cursor:pointer; margin-left:5px; }
   table { border-collapse: collapse; width: 100%; margin-top: 20px; }
   th, td { border:1px solid #ccc; padding:10px; text-align:center; }
+  img { vertical-align: middle; }
 </style>
 </head>
 <body>
@@ -23,7 +24,7 @@
 <!-- Matches -->
 <h2>Matches</h2>
 <table id="matches-table">
-  <tr><th>Match</th><th>Prediction</th><th>Action</th></tr>
+  <tr><th>Match</th><th>Odds</th><th>Prediction</th><th>Action</th></tr>
 </table>
 
 <!-- Leaderboard -->
@@ -32,93 +33,132 @@
   <tr><th>User</th><th>Points</th></tr>
 </table>
 
-<!-- Firebase Scripts -->
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 
 <script>
-  // Firebase configuration
-  var firebaseConfig = {
-    apiKey: "AIzaSyDyqTVq8hDjWatJBG4uVgTGaPA6TZ5yA_s",
-    authDomain: "betika-style-predictor.firebaseapp.com",
-    projectId: "betika-style-predictor",
-    storageBucket: "betika-style-predictor.firebasestorage.app",
-    messagingSenderId: "1081822274358",
-    appId: "1:1081822274358:web:cfd0d79f9d1c6e5fd68997"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyDyqTVq8hDjWatJBG4uVgTGaPA6TZ5yA_s",
+  authDomain: "betika-style-predictor.firebaseapp.com",
+  projectId: "betika-style-predictor",
+  storageBucket: "betika-style-predictor.firebasestorage.app",
+  messagingSenderId: "1081822274358",
+  appId: "1:1081822274358:web:cfd0d79f9d1c6e5fd68997"
+};
 
-  // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
-  var auth = firebase.auth();
-  var db = firebase.firestore();
-  var provider = new firebase.auth.GoogleAuthProvider();
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+const provider = new firebase.auth.GoogleAuthProvider();
 
-  var loginBtn = document.getElementById("login-btn");
-  var logoutBtn = document.getElementById("logout-btn");
-  var userInfo = document.getElementById("user-info");
-  var matchesTable = document.getElementById("matches-table");
-  var leaderboardTable = document.getElementById("leaderboard-table");
+const loginBtn = document.getElementById("login-btn");
+const logoutBtn = document.getElementById("logout-btn");
+const userInfo = document.getElementById("user-info");
+const matchesTable = document.getElementById("matches-table");
+const leaderboardTable = document.getElementById("leaderboard-table");
 
-  // Login/Logout
-  loginBtn.onclick = function() { auth.signInWithPopup(provider).catch(e => alert(e.message)); };
-  logoutBtn.onclick = function() { auth.signOut(); };
+const apiKey = "50f522f5ff34de0a7224a773578c6509";
 
-  // Detect login state
-  auth.onAuthStateChanged(function(user){
-    if(user){
-      loginBtn.style.display = "none";
-      logoutBtn.style.display = "inline-block";
-      userInfo.innerHTML = "Logged in as <b>"+user.displayName+"</b>";
+// --- LOGIN ---
+loginBtn.onclick = () => auth.signInWithPopup(provider).catch(e => alert(e.message));
+logoutBtn.onclick = () => auth.signOut();
 
-      // Load placeholder matches
-      loadMatches();
+auth.onAuthStateChanged(user => {
+  if(user){
+    loginBtn.style.display = "none";
+    logoutBtn.style.display = "inline-block";
+    userInfo.innerHTML = `Logged in as <b>${user.displayName}</b>`;
 
-      // Load placeholder leaderboard
-      loadLeaderboard();
-    } else {
-      loginBtn.style.display = "inline-block";
-      logoutBtn.style.display = "none";
-      userInfo.innerHTML = "";
-      matchesTable.innerHTML = "<tr><th>Match</th><th>Prediction</th><th>Action</th></tr>";
-      leaderboardTable.innerHTML = "<tr><th>User</th><th>Points</th></tr>";
+    loadMatches();
+    loadLeaderboard();
+  } else {
+    loginBtn.style.display = "inline-block";
+    logoutBtn.style.display = "none";
+    userInfo.innerHTML = "";
+    matchesTable.innerHTML = "<tr><th>Match</th><th>Odds</th><th>Prediction</th><th>Action</th></tr>";
+    leaderboardTable.innerHTML = "<tr><th>User</th><th>Points</th></tr>";
+  }
+});
+
+// --- LOAD MATCHES ---
+async function loadMatches(){
+  matchesTable.innerHTML = "<tr><th>Match</th><th>Odds</th><th>Prediction</th><th>Action</th></tr>";
+  try {
+    const leagues = [39, 140]; // EPL + La Liga
+    for(const league of leagues){
+      const res = await fetch(`https://v3.football.api-sports.io/fixtures?league=${league}&season=2025`, {
+        headers: { "x-apisports-key": apiKey }
+      });
+      const data = await res.json();
+      const fixtures = data.response;
+
+      fixtures.forEach(f => {
+        const row = matchesTable.insertRow();
+        const home = f.teams.home.name;
+        const away = f.teams.away.name;
+
+        // Logos + match
+        row.insertCell(0).innerHTML = `<img src="${f.teams.home.logo}" width="30"> ${home} vs <img src="${f.teams.away.logo}" width="30"> ${away}`;
+
+        // Odds (if your API plan provides them)
+        row.insertCell(1).innerHTML = `
+          Home: ${f.odds?.home ?? "-"} | 
+          Draw: ${f.odds?.draw ?? "-"} | 
+          Away: ${f.odds?.away ?? "-"}`;
+
+        // Prediction
+        row.insertCell(2).innerHTML = `
+          <select id="pred-${f.fixture.id}">
+            <option value="1">Home</option>
+            <option value="X">Draw</option>
+            <option value="2">Away</option>
+          </select>`;
+
+        // Submit button
+        row.insertCell(3).innerHTML = `<button onclick="submitPrediction('${f.fixture.id}', '${home} vs ${away}')">Submit</button>`;
+      });
     }
-  });
-
-  // Placeholder matches
-  function loadMatches(){
-    const sampleMatches = [
-      "Liverpool vs Man City",
-      "Chelsea vs Arsenal",
-      "Barcelona vs Real Madrid"
-    ];
-    sampleMatches.forEach(match => {
-      const row = matchesTable.insertRow();
-      row.insertCell(0).innerText = match;
-      row.insertCell(1).innerHTML = `
-        <select>
-          <option value="1">Home</option>
-          <option value="X">Draw</option>
-          <option value="2">Away</option>
-        </select>`;
-      row.insertCell(2).innerHTML = `<button onclick="alert('Prediction submitted!')">Submit</button>`;
-    });
+  } catch(e){
+    alert("Error loading matches: "+e.message);
   }
+}
 
-  // Placeholder leaderboard
-  function loadLeaderboard(){
-    const sampleLeaderboard = [
-      { user: "Alice", points: 10 },
-      { user: "Bob", points: 8 },
-      { user: "Kelvin", points: 5 }
-    ];
-    sampleLeaderboard.forEach(entry => {
+// --- SUBMIT PREDICTION ---
+function submitPrediction(fixtureId, matchName){
+  const user = auth.currentUser;
+  if(!user) return alert("Login first!");
+  const prediction = document.getElementById(`pred-${fixtureId}`).value;
+
+  db.collection("predictions").doc(fixtureId + "_" + user.uid).set({
+    user: user.displayName,
+    match: matchName,
+    prediction: prediction,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(()=> alert("Prediction submitted!"))
+  .catch(e=> alert("Error: "+e.message));
+}
+
+// --- LOAD LEADERBOARD ---
+function loadLeaderboard(){
+  db.collection("predictions").get().then(snapshot => {
+    const pointsMap = {};
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      pointsMap[data.user] = (pointsMap[data.user] || 0) + 1; // +1 point per prediction (placeholder)
+    });
+
+    leaderboardTable.innerHTML = "<tr><th>User</th><th>Points</th></tr>";
+    Object.keys(pointsMap).sort((a,b)=> pointsMap[b]-pointsMap[a]).forEach(u=>{
       const row = leaderboardTable.insertRow();
-      row.insertCell(0).innerText = entry.user;
-      row.insertCell(1).innerText = entry.points;
+      row.insertCell(0).innerText = u;
+      row.insertCell(1).innerText = pointsMap[u];
     });
-  }
+  });
+}
 </script>
 
 </body>
-</html> 
+</html>
