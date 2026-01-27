@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -68,6 +69,23 @@ function predict(option, fixtureId) {
   displayPredictions();
 }
 
+// Fetch odds for a fixture and update buttons
+function fetchOdds(fixtureId) {
+  fetch(`https://v3.football.api-sports.io/odds?fixture=${fixtureId}`, {
+    headers: { "x-apisports-key": API_KEY }
+  })
+  .then(res => res.json())
+  .then(data => {
+    const odds = data.response[0]?.bookmakers[0]?.bets[0]?.values;
+    if(odds){
+      document.getElementById(`home-${fixtureId}`).innerText = `Home Win ${odds[0].odd}`;
+      document.getElementById(`draw-${fixtureId}`).innerText = `Draw ${odds[1].odd}`;
+      document.getElementById(`away-${fixtureId}`).innerText = `Away Win ${odds[2].odd}`;
+    }
+  })
+  .catch(err => console.warn(`No odds for fixture ${fixtureId}`, err));
+}
+
 // ------------------ Live Matches ------------------
 fetch("https://v3.football.api-sports.io/fixtures?live=all", {
   headers: { "x-apisports-key": API_KEY }
@@ -80,6 +98,7 @@ fetch("https://v3.football.api-sports.io/fixtures?live=all", {
     container.innerText = "No live matches currently.";
   } else {
     data.response.forEach(match => {
+      const fixtureId = match.fixture.id;
       container.innerHTML += `
         <div class="match live">
           <img src="${match.teams.home.logo}" class="logo">
@@ -87,12 +106,13 @@ fetch("https://v3.football.api-sports.io/fixtures?live=all", {
           <img src="${match.teams.away.logo}" class="logo"><br>
           🕒 ${formatTime(match.fixture.date)} | Status: ${match.fixture.status.long}
           <div class="odds">
-            <button onclick="predict('home', ${match.fixture.id})">Home Win 2.5</button>
-            <button onclick="predict('draw', ${match.fixture.id})">Draw 3.1</button>
-            <button onclick="predict('away', ${match.fixture.id})">Away Win 2.8</button>
+            <button id="home-${fixtureId}" onclick="predict('home', ${fixtureId})">Home Win 2.5</button>
+            <button id="draw-${fixtureId}" onclick="predict('draw', ${fixtureId})">Draw 3.1</button>
+            <button id="away-${fixtureId}" onclick="predict('away', ${fixtureId})">Away Win 2.8</button>
           </div>
         </div>
       `;
+      fetchOdds(fixtureId); // fetch real odds if API key allows
     });
   }
 })
@@ -108,6 +128,7 @@ fetch("https://v3.football.api-sports.io/fixtures?next=5", {
   container.innerHTML = "";
 
   data.response.forEach(match => {
+    const fixtureId = match.fixture.id;
     const dateUTC = new Date(match.fixture.date);
     const countdown = () => {
       const now = new Date();
@@ -127,12 +148,14 @@ fetch("https://v3.football.api-sports.io/fixtures?next=5", {
       <img src="${match.teams.away.logo}" class="logo"><br>
       🕒 Kickoff: ${formatTime(match.fixture.date)} | ⏱ Countdown: <span class="countdown">${countdown()}</span>
       <div class="odds">
-        <button onclick="predict('home', ${match.fixture.id})">Home Win 2.5</button>
-        <button onclick="predict('draw', ${match.fixture.id})">Draw 3.1</button>
-        <button onclick="predict('away', ${match.fixture.id})">Away Win 2.8</button>
+        <button id="home-${fixtureId}" onclick="predict('home', ${fixtureId})">Home Win 2.5</button>
+        <button id="draw-${fixtureId}" onclick="predict('draw', ${fixtureId})">Draw 3.1</button>
+        <button id="away-${fixtureId}" onclick="predict('away', ${fixtureId})">Away Win 2.8</button>
       </div>
     `;
     container.appendChild(matchDiv);
+
+    fetchOdds(fixtureId); // fetch real odds if API key allows
 
     const countdownSpan = matchDiv.querySelector(".countdown");
     setInterval(()=> { countdownSpan.innerText = countdown(); }, 1000);
