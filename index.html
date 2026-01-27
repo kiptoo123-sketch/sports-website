@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -15,6 +14,7 @@
     .odds button:hover { background:#0056b3; }
     .countdown { font-weight:bold; color:#e67e22; }
     #predictions { background:white; padding:10px; border-radius:5px; border:1px solid #ccc; margin-top:10px; }
+    .league { font-size: 0.9em; color: #555; margin-bottom: 5px; }
   </style>
 </head>
 <body>
@@ -86,10 +86,54 @@ function fetchOdds(fixtureId) {
   .catch(err => console.warn(`No odds for fixture ${fixtureId}`, err));
 }
 
-// ------------------ Live Matches ------------------
-fetch("https://v3.football.api-sports.io/fixtures?live=all", {
-  headers: { "x-apisports-key": API_KEY }
-})
+// ------------------ Render Matches ------------------
+function renderMatch(container, match, type="upcoming") {
+  const fixtureId = match.fixture.id;
+  const leagueName = match.league.name;
+  const countryName = match.league.country;
+
+  const dateUTC = new Date(match.fixture.date);
+  const countdown = () => {
+    const now = new Date();
+    const diff = dateUTC - now;
+    if(diff <= 0) return "Kickoff now!";
+    const hours = Math.floor(diff/1000/60/60);
+    const minutes = Math.floor((diff/1000/60)%60);
+    const seconds = Math.floor((diff/1000)%60);
+    return `${hours}h ${minutes}m ${seconds}s`;
+  }
+
+  const matchDiv = document.createElement("div");
+  matchDiv.className = "match";
+  if(type==="live") matchDiv.classList.add("live");
+
+  matchDiv.innerHTML = `
+    <div class="league"><strong>${leagueName}</strong> (${countryName})</div>
+    <img src="${match.teams.home.logo}" class="logo">
+    <div class="teams"><strong>${match.teams.home.name}</strong> vs <strong>${match.teams.away.name}</strong></div>
+    <img src="${match.teams.away.logo}" class="logo"><br>
+    🕒 Kickoff: ${formatTime(match.fixture.date)}
+    ${type==="upcoming"? '| ⏱ Countdown: <span class="countdown">'+countdown()+'</span>':''}
+    ${type==="results"? '| Score: '+match.goals.home+'-'+match.goals.away:''}
+    <div class="odds">
+      <button id="home-${fixtureId}" onclick="predict('home', ${fixtureId})">Home Win 2.5</button>
+      <button id="draw-${fixtureId}" onclick="predict('draw', ${fixtureId})">Draw 3.1</button>
+      <button id="away-${fixtureId}" onclick="predict('away', ${fixtureId})">Away Win 2.8</button>
+    </div>
+  `;
+
+  container.appendChild(matchDiv);
+
+  if(type==="upcoming") {
+    const countdownSpan = matchDiv.querySelector(".countdown");
+    setInterval(()=> { countdownSpan.innerText = countdown(); }, 1000);
+  }
+
+  fetchOdds(fixtureId); // fetch real odds if API key allows
+}
+
+// ------------------ Fetch Live Matches ------------------
+fetch("https://v3.football.api-sports.io/fixtures?live=all", { headers: { "x-apisports-key": API_KEY } })
 .then(res => res.json())
 .then(data => {
   const container = document.getElementById("live");
@@ -97,80 +141,27 @@ fetch("https://v3.football.api-sports.io/fixtures?live=all", {
   if(data.response.length === 0){
     container.innerText = "No live matches currently.";
   } else {
-    data.response.forEach(match => {
-      const fixtureId = match.fixture.id;
-      container.innerHTML += `
-        <div class="match live">
-          <img src="${match.teams.home.logo}" class="logo">
-          <div class="teams"><strong>${match.teams.home.name}</strong> vs <strong>${match.teams.away.name}</strong></div>
-          <img src="${match.teams.away.logo}" class="logo"><br>
-          🕒 ${formatTime(match.fixture.date)} | Status: ${match.fixture.status.long}
-          <div class="odds">
-            <button id="home-${fixtureId}" onclick="predict('home', ${fixtureId})">Home Win 2.5</button>
-            <button id="draw-${fixtureId}" onclick="predict('draw', ${fixtureId})">Draw 3.1</button>
-            <button id="away-${fixtureId}" onclick="predict('away', ${fixtureId})">Away Win 2.8</button>
-          </div>
-        </div>
-      `;
-      fetchOdds(fixtureId); // fetch real odds if API key allows
-    });
+    data.response.forEach(match => renderMatch(container, match, "live"));
   }
 })
 .catch(err => { document.getElementById("live").innerText = "Error loading live matches"; console.error(err); });
 
-// ------------------ Upcoming Matches ------------------
-fetch("https://v3.football.api-sports.io/fixtures?next=5", {
-  headers: { "x-apisports-key": API_KEY }
-})
+// ------------------ Fetch Upcoming Matches ------------------
+fetch("https://v3.football.api-sports.io/fixtures?next=5", { headers: { "x-apisports-key": API_KEY } })
 .then(res => res.json())
 .then(data => {
   const container = document.getElementById("upcoming");
   container.innerHTML = "";
-
-  data.response.forEach(match => {
-    const fixtureId = match.fixture.id;
-    const dateUTC = new Date(match.fixture.date);
-    const countdown = () => {
-      const now = new Date();
-      const diff = dateUTC - now;
-      if(diff <= 0) return "Kickoff now!";
-      const hours = Math.floor(diff/1000/60/60);
-      const minutes = Math.floor((diff/1000/60)%60);
-      const seconds = Math.floor((diff/1000)%60);
-      return `${hours}h ${minutes}m ${seconds}s`;
-    }
-
-    const matchDiv = document.createElement("div");
-    matchDiv.className = "match";
-    matchDiv.innerHTML = `
-      <img src="${match.teams.home.logo}" class="logo">
-      <div class="teams"><strong>${match.teams.home.name}</strong> vs <strong>${match.teams.away.name}</strong></div>
-      <img src="${match.teams.away.logo}" class="logo"><br>
-      🕒 Kickoff: ${formatTime(match.fixture.date)} | ⏱ Countdown: <span class="countdown">${countdown()}</span>
-      <div class="odds">
-        <button id="home-${fixtureId}" onclick="predict('home', ${fixtureId})">Home Win 2.5</button>
-        <button id="draw-${fixtureId}" onclick="predict('draw', ${fixtureId})">Draw 3.1</button>
-        <button id="away-${fixtureId}" onclick="predict('away', ${fixtureId})">Away Win 2.8</button>
-      </div>
-    `;
-    container.appendChild(matchDiv);
-
-    fetchOdds(fixtureId); // fetch real odds if API key allows
-
-    const countdownSpan = matchDiv.querySelector(".countdown");
-    setInterval(()=> { countdownSpan.innerText = countdown(); }, 1000);
-  });
+  data.response.forEach(match => renderMatch(container, match, "upcoming"));
 })
 .catch(err => { document.getElementById("upcoming").innerText = "Error loading upcoming matches"; console.error(err); });
 
-// ------------------ Finished Matches ------------------
+// ------------------ Fetch Finished Matches ------------------
 const yesterday = new Date();
 yesterday.setDate(yesterday.getDate() - 1);
 const yDate = yesterday.toISOString().split("T")[0];
 
-fetch(`https://v3.football.api-sports.io/fixtures?date=${yDate}`, {
-  headers: { "x-apisports-key": API_KEY }
-})
+fetch(`https://v3.football.api-sports.io/fixtures?date=${yDate}`, { headers: { "x-apisports-key": API_KEY } })
 .then(res => res.json())
 .then(data => {
   const container = document.getElementById("results");
@@ -178,16 +169,7 @@ fetch(`https://v3.football.api-sports.io/fixtures?date=${yDate}`, {
   if(data.response.length === 0){
     container.innerText = "No finished matches for yesterday.";
   } else {
-    data.response.forEach(match => {
-      container.innerHTML += `
-        <div class="match">
-          <img src="${match.teams.home.logo}" class="logo">
-          <div class="teams"><strong>${match.teams.home.name}</strong> ${match.goals.home} - ${match.goals.away} <strong>${match.teams.away.name}</strong></div>
-          <img src="${match.teams.away.logo}" class="logo"><br>
-          Status: ${match.fixture.status.long}
-        </div>
-      `;
-    });
+    data.response.forEach(match => renderMatch(container, match, "results"));
   }
 })
 .catch(err => { document.getElementById("results").innerText = "Error loading results"; console.error(err); });
