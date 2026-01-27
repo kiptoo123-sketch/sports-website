@@ -24,24 +24,22 @@
 <h2>Matches</h2>
 <table id="matches-table">
   <tr><th>Match</th><th>Prediction</th><th>Action</th></tr>
-  <!-- Matches will appear here -->
 </table>
 
 <!-- Leaderboard -->
 <h2>Leaderboard</h2>
 <table id="leaderboard-table">
   <tr><th>User</th><th>Points</th></tr>
-  <!-- Leaderboard will appear here -->
 </table>
 
 <!-- Firebase Scripts -->
-<script src="https://www.gstatic.com/firebasejs/10.6.2/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.6.2/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.6.2/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 
 <script>
-  // Firebase config
-  const firebaseConfig = {
+  // Firebase configuration
+  var firebaseConfig = {
     apiKey: "AIzaSyDyqTVq8hDjWatJBG4uVgTGaPA6TZ5yA_s",
     authDomain: "betika-style-predictor.firebaseapp.com",
     projectId: "betika-style-predictor",
@@ -52,76 +50,75 @@
 
   // Initialize Firebase
   firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.firestore();
-  const provider = new firebase.auth.GoogleAuthProvider();
+  var auth = firebase.auth();
+  var db = firebase.firestore();
+  var provider = new firebase.auth.GoogleAuthProvider();
 
-  const loginBtn = document.getElementById("login-btn");
-  const logoutBtn = document.getElementById("logout-btn");
-  const userInfo = document.getElementById("user-info");
-  const matchesTable = document.getElementById("matches-table");
-  const leaderboardTable = document.getElementById("leaderboard-table");
+  var loginBtn = document.getElementById("login-btn");
+  var logoutBtn = document.getElementById("logout-btn");
+  var userInfo = document.getElementById("user-info");
+  var matchesTable = document.getElementById("matches-table");
+  var leaderboardTable = document.getElementById("leaderboard-table");
 
   // Login/Logout
-  loginBtn.onclick = () => auth.signInWithPopup(provider).catch(e => alert(e.message));
-  logoutBtn.onclick = () => auth.signOut();
+  loginBtn.onclick = function() { auth.signInWithPopup(provider).catch(e => alert(e.message)); };
+  logoutBtn.onclick = function() { auth.signOut(); };
 
   // Detect login state
-  auth.onAuthStateChanged(user => {
-      if(user){
-          loginBtn.style.display = "none";
-          logoutBtn.style.display = "inline-block";
-          userInfo.innerHTML = `Logged in as <b>${user.displayName}</b>`;
+  auth.onAuthStateChanged(function(user){
+    if(user){
+      loginBtn.style.display = "none";
+      logoutBtn.style.display = "inline-block";
+      userInfo.innerHTML = "Logged in as <b>"+user.displayName+"</b>";
 
-          // Load matches (placeholder)
-          loadMatches();
+      // Load placeholder matches
+      loadMatches();
 
-          // Load leaderboard (placeholder)
-          loadLeaderboard();
-      } else {
-          loginBtn.style.display = "inline-block";
-          logoutBtn.style.display = "none";
-          userInfo.innerHTML = "";
-          matchesTable.innerHTML = `<tr><th>Match</th><th>Prediction</th><th>Action</th></tr>`;
-          leaderboardTable.innerHTML = `<tr><th>User</th><th>Points</th></tr>`;
-      }
+      // Load placeholder leaderboard
+      loadLeaderboard();
+    } else {
+      loginBtn.style.display = "inline-block";
+      logoutBtn.style.display = "none";
+      userInfo.innerHTML = "";
+      matchesTable.innerHTML = "<tr><th>Match</th><th>Prediction</th><th>Action</th></tr>";
+      leaderboardTable.innerHTML = "<tr><th>User</th><th>Points</th></tr>";
+    }
   });
 
   // Placeholder matches
   function loadMatches(){
-      const sampleMatches = [
-          "Liverpool vs Man City",
-          "Chelsea vs Arsenal",
-          "Barcelona vs Real Madrid"
-      ];
-      sampleMatches.forEach(match => {
-          const row = matchesTable.insertRow();
-          row.insertCell(0).innerText = match;
-          row.insertCell(1).innerHTML = `
-            <select>
-              <option value="1">Home</option>
-              <option value="X">Draw</option>
-              <option value="2">Away</option>
-            </select>`;
-          row.insertCell(2).innerHTML = `<button>Submit</button>`;
-      });
+    const sampleMatches = [
+      "Liverpool vs Man City",
+      "Chelsea vs Arsenal",
+      "Barcelona vs Real Madrid"
+    ];
+    sampleMatches.forEach(match => {
+      const row = matchesTable.insertRow();
+      row.insertCell(0).innerText = match;
+      row.insertCell(1).innerHTML = `
+        <select>
+          <option value="1">Home</option>
+          <option value="X">Draw</option>
+          <option value="2">Away</option>
+        </select>`;
+      row.insertCell(2).innerHTML = `<button onclick="alert('Prediction submitted!')">Submit</button>`;
+    });
   }
 
   // Placeholder leaderboard
   function loadLeaderboard(){
-      const sampleLeaderboard = [
-          { user: "Alice", points: 10 },
-          { user: "Bob", points: 8 },
-          { user: "Kelvin", points: 5 }
-      ];
-      sampleLeaderboard.forEach(entry => {
-          const row = leaderboardTable.insertRow();
-          row.insertCell(0).innerText = entry.user;
-          row.insertCell(1).innerText = entry.points;
-      });
+    const sampleLeaderboard = [
+      { user: "Alice", points: 10 },
+      { user: "Bob", points: 8 },
+      { user: "Kelvin", points: 5 }
+    ];
+    sampleLeaderboard.forEach(entry => {
+      const row = leaderboardTable.insertRow();
+      row.insertCell(0).innerText = entry.user;
+      row.insertCell(1).innerText = entry.points;
+    });
   }
-
 </script>
 
 </body>
-</html>
+</html> 
