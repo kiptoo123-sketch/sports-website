@@ -1,19 +1,21 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Betika-Style Predictor</title>
 <style>
-  body { font-family: Arial, sans-serif; padding: 20px; background:#f9f9f9; }
+  body { font-family: Arial, sans-serif; background:#f5f5f5; padding:20px; }
   h1, h2 { text-align:center; }
-  button { margin:5px; padding:8px 12px; cursor:pointer; }
-  #matches, #leaderboard { margin-top:20px; }
-  table { width:100%; border-collapse: collapse; margin-top:10px; }
-  th, td { border:1px solid #ccc; padding:8px; text-align:center; }
-  th { background:#eee; }
+  #login-section { text-align:center; margin-bottom:20px; }
+  button { padding:8px 15px; margin:5px; cursor:pointer; }
+  .match-card { background:#fff; padding:10px; margin:10px 0; border-radius:6px; box-shadow:0 0 5px rgba(0,0,0,0.1); display:flex; justify-content:space-between; align-items:center; }
+  .match-info { flex:1; margin-left:10px; }
   select { padding:5px; }
-  small { color:#555; }
+  table { width:100%; border-collapse: collapse; margin-top:10px; background:#fff; border-radius:6px; overflow:hidden; }
+  th, td { padding:8px; text-align:center; border-bottom:1px solid #ddd; }
+  th { background:#eee; }
+  img.team-logo { height:30px; width:30px; vertical-align:middle; margin-right:5px; }
 </style>
 </head>
 <body>
@@ -25,16 +27,11 @@
   <button id="logout-btn" style="display:none;">Logout</button>
 </div>
 
-<div id="user-info"></div>
+<div id="user-info" style="text-align:center;"></div>
 
 <div id="matches">
   <h2>Matches</h2>
-  <table id="matches-table">
-    <thead>
-      <tr><th>League</th><th>Match</th><th>Prediction</th><th>Action</th></tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <div id="matches-container"></div>
 </div>
 
 <div id="leaderboard">
@@ -47,13 +44,12 @@
   </table>
 </div>
 
-<!-- Firebase SDK -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.2/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.6.2/firebase-auth.js";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.6.2/firebase-firestore.js";
 
-// Firebase config
+// --- Firebase config ---
 const firebaseConfig = {
   apiKey: "AIzaSyDyqTVq8hDjWatJBG4uVgTGaPA6TZ5yA_s",
   authDomain: "betika-style-predictor.firebaseapp.com",
@@ -68,16 +64,15 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-// DOM Elements
 const loginBtn = document.getElementById("login-btn");
 const logoutBtn = document.getElementById("logout-btn");
 const userInfo = document.getElementById("user-info");
-const matchesTableBody = document.querySelector("#matches-table tbody");
+const matchesContainer = document.getElementById("matches-container");
 const leaderboardBody = document.querySelector("#leaderboard-table tbody");
 
 let currentUser = null;
 
-// League list
+// --- Leagues ---
 const leagues = [
   { name: "Premier League", id: 4328 },
   { name: "La Liga", id: 4335 },
@@ -86,118 +81,116 @@ const leagues = [
   { name: "Ligue 1", id: 4334 }
 ];
 
-// Load matches from all leagues
+// --- Load matches ---
 async function loadMatches() {
-  try {
-    matchesTableBody.innerHTML = "<tr><td colspan='4'>Loading matches...</td></tr>";
-    let allMatches = [];
+  matchesContainer.innerHTML = "<p>Loading matches...</p>";
+  let allMatches = [];
 
-    for (const league of leagues) {
+  for (const league of leagues) {
+    try {
       const res = await fetch("https://api.allorigins.win/raw?url=" +
-        encodeURIComponent(
-          `https://www.thesportsdb.com/api/v1/json/50f522f5ff34de0a7224a773578c6509/eventsnextleague.php?id=${league.id}`
-        )
+        encodeURIComponent(`https://www.thesportsdb.com/api/v1/json/50f522f5ff34de0a7224a773578c6509/eventsnextleague.php?id=${league.id}`)
       );
       const data = await res.json();
-      if(data.events) {
-        const leagueMatches = data.events.map((event,index) => ({
-          id: `${league.id}-${index+1}`,
+      if(data.events){
+        const leagueMatches = data.events.map((event,index)=>({
+          id:`${league.id}-${index+1}`,
           league: league.name,
-          teams: `${event.strHomeTeam} vs ${event.strAwayTeam}`,
+          home: event.strHomeTeam,
+          away: event.strAwayTeam,
+          homeLogo: event.strHomeTeamBadge || "",
+          awayLogo: event.strAwayTeamBadge || "",
           date: event.dateEvent,
           time: event.strTime
         }));
         allMatches = allMatches.concat(leagueMatches);
       }
+    } catch(err) {
+      console.error("Failed to load league", league.name, err);
     }
-
-    displayMatches(allMatches);
-
-  } catch(err) {
-    console.error("Error loading matches:", err);
-    matchesTableBody.innerHTML = "<tr><td colspan='4'>Failed to load matches.</td></tr>";
   }
+
+  displayMatches(allMatches);
 }
 
-function displayMatches(matches) {
-  matchesTableBody.innerHTML = "";
-  matches.forEach(match => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${match.league}</td>
-      <td>${match.teams}<br><small>${match.date} ${match.time}</small></td>
-      <td>
+function displayMatches(matches){
+  matchesContainer.innerHTML = "";
+  matches.forEach(match=>{
+    const div = document.createElement("div");
+    div.className = "match-card";
+    div.innerHTML = `
+      <div><b>${match.league}</b></div>
+      <div class="match-info">
+        <img src="${match.homeLogo}" class="team-logo">${match.home} 
+        vs 
+        <img src="${match.awayLogo}" class="team-logo">${match.away}
+        <br><small>${match.date} ${match.time}</small>
+      </div>
+      <div>
         <select id="pred-${match.id}">
-          <option value="">Select</option>
+          <option value="">Predict</option>
           <option value="Home">Home</option>
           <option value="Draw">Draw</option>
           <option value="Away">Away</option>
         </select>
-      </td>
-      <td><button onclick="submitPrediction('${match.id}', '${match.teams}')">Predict</button></td>
+        <button onclick="submitPrediction('${match.id}','${match.home} vs ${match.away}')">Submit</button>
+      </div>
     `;
-    matchesTableBody.appendChild(tr);
+    matchesContainer.appendChild(div);
   });
 }
 
-// Submit prediction
-window.submitPrediction = async (matchId, matchName) => {
+// --- Submit prediction ---
+window.submitPrediction = async (matchId, matchName)=>{
   if(!currentUser) return alert("Login first!");
-  const select = document.getElementById(`pred-${matchId}`);
-  const prediction = select.value;
+  const sel = document.getElementById(`pred-${matchId}`);
+  const prediction = sel.value;
   if(!prediction) return alert("Select a prediction");
-
-  await addDoc(collection(db, "predictions"), {
+  await addDoc(collection(db,"predictions"),{
     user: currentUser.displayName,
     matchId,
     matchName,
     prediction,
     timestamp: Date.now()
   });
-
   alert("Prediction saved!");
 };
 
-// Leaderboard
-function displayLeaderboard(data) {
+// --- Leaderboard ---
+const q = query(collection(db,"predictions"),orderBy("timestamp","desc"));
+onSnapshot(q,snapshot=>{
+  const map={};
+  snapshot.docs.forEach(doc=>{
+    const d=doc.data();
+    map[d.user]=(map[d.user]||0)+1;
+  });
+  const data=Object.keys(map).map(u=>({user:u,points:map[u]}));
   leaderboardBody.innerHTML = "";
-  data.forEach(item => {
+  data.forEach(item=>{
     const tr = document.createElement("tr");
     tr.innerHTML = `<td>${item.user}</td><td>${item.points}</td>`;
     leaderboardBody.appendChild(tr);
   });
-}
-
-// Listen to Firestore updates
-const q = query(collection(db, "predictions"), orderBy("timestamp","desc"));
-onSnapshot(q, snapshot => {
-  const leaderboardMap = {};
-  snapshot.docs.forEach(doc => {
-    const data = doc.data();
-    leaderboardMap[data.user] = (leaderboardMap[data.user] || 0) + 1;
-  });
-  const leaderboardData = Object.keys(leaderboardMap).map(u => ({ user:u, points:leaderboardMap[u] }));
-  displayLeaderboard(leaderboardData);
 });
 
-// Auth
-loginBtn.onclick = () => signInWithPopup(auth, provider).catch(err=>alert(err.message));
-logoutBtn.onclick = () => signOut(auth);
+// --- Authentication ---
+loginBtn.onclick = ()=> signInWithPopup(auth,provider).catch(e=>alert(e.message));
+logoutBtn.onclick = ()=> signOut(auth);
 
-onAuthStateChanged(auth, user => {
+onAuthStateChanged(auth,user=>{
   currentUser = user;
   if(user){
-    loginBtn.style.display = "none";
-    logoutBtn.style.display = "inline-block";
-    userInfo.innerHTML = `Logged in as <b>${user.displayName}</b>`;
-  } else {
-    loginBtn.style.display = "inline-block";
-    logoutBtn.style.display = "none";
-    userInfo.innerHTML = "";
+    loginBtn.style.display="none";
+    logoutBtn.style.display="inline-block";
+    userInfo.innerHTML=`Logged in as <b>${user.displayName}</b>`;
+  } else{
+    loginBtn.style.display="inline-block";
+    logoutBtn.style.display="none";
+    userInfo.innerHTML="";
   }
 });
 
-// Load matches
+// --- Start ---
 loadMatches();
 
 </script>
