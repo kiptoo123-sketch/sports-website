@@ -1,204 +1,174 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Betika-style Predictor</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      margin: 0;
-      padding: 0;
-    }
-
-    header {
-      background: #1e3a8a;
-      color: white;
-      padding: 20px;
-      text-align: center;
-    }
-
-    header button {
-      margin-left: 10px;
-      padding: 8px 12px;
-      font-size: 14px;
-      cursor: pointer;
-    }
-
-    main {
-      max-width: 800px;
-      margin: 20px auto;
-      padding: 0 15px;
-    }
-
-    section {
-      background: white;
-      padding: 15px;
-      margin-bottom: 15px;
-      border-radius: 8px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    }
-
-    h2 {
-      margin-top: 0;
-    }
-
-    #matches-list button {
-      margin-top: 5px;
-      padding: 5px 10px;
-      cursor: pointer;
-    }
-
-    footer {
-      text-align: center;
-      padding: 10px;
-      background: #1e3a8a;
-      color: white;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Betika-Style Predictor</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; background:#f9f9f9; }
+  h1 { text-align:center; }
+  button { margin:5px; padding:8px 12px; }
+  #matches, #leaderboard { margin-top:20px; }
+  table { width:100%; border-collapse: collapse; }
+  th, td { border:1px solid #ccc; padding:8px; text-align:center; }
+  th { background:#eee; }
+</style>
 </head>
 <body>
-  <header>
-    <h1>⚽ Betika-style Predictor</h1>
-    <button id="login-btn">Login with Google</button>
-    <button id="logout-btn" hidden>Logout</button>
-  </header>
 
-  <main>
-    <section id="matches">
-      <h2>Upcoming Matches</h2>
-      <div id="matches-list">Loading matches...</div>
-    </section>
+<h1>Betika-Style Predictor</h1>
 
-    <section id="predictions">
-      <h2>Your Predictions</h2>
-      <div id="user-predictions">No predictions yet.</div>
-    </section>
+<div id="login-section">
+  <button id="login-btn">Login with Google</button>
+  <button id="logout-btn" style="display:none;">Logout</button>
+</div>
 
-    <section id="leaderboard">
-      <h2>Leaderboard</h2>
-      <ol id="leaderboard-list">
-        <li>Loading...</li>
-      </ol>
-    </section>
-  </main>
+<div id="user-info"></div>
 
-  <footer>
-    <p>Powered by Firebase & GitHub Pages</p>
-  </footer>
+<div id="matches">
+  <h2>Matches</h2>
+  <table id="matches-table">
+    <thead>
+      <tr><th>Match</th><th>Prediction</th><th>Action</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
 
-  <!-- Firebase SDK -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, onSnapshot, query } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+<div id="leaderboard">
+  <h2>Leaderboard</h2>
+  <table id="leaderboard-table">
+    <thead>
+      <tr><th>User</th><th>Points</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
 
-    // Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyDyqTVq8hDjWatJBG4uVgTGaPA6TZ5yA_s",
-      authDomain: "betika-style-predictor.firebaseapp.com",
-      projectId: "betika-style-predictor",
-      storageBucket: "betika-style-predictor.firebasestorage.app",
-      messagingSenderId: "1081822274358",
-      appId: "1:1081822274358:web:cfd0d79f9d1c6e5fd68997"
-    };
+<!-- Firebase SDK -->
+<script type="module">
+  // Import Firebase
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.2/firebase-app.js";
+  import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.6.2/firebase-auth.js";
+  import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.6.2/firebase-firestore.js";
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyDyqTVq8hDjWatJBG4uVgTGaPA6TZ5yA_s",
+    authDomain: "betika-style-predictor.firebaseapp.com",
+    projectId: "betika-style-predictor",
+    storageBucket: "betika-style-predictor.firebasestorage.app",
+    messagingSenderId: "1081822274358",
+    appId: "1:1081822274358:web:cfd0d79f9d1c6e5fd68997"
+  };
 
-    // DOM elements
-    const loginBtn = document.getElementById("login-btn");
-    const logoutBtn = document.getElementById("logout-btn");
-    const matchesList = document.getElementById("matches-list");
-    const userPredictions = document.getElementById("user-predictions");
-    const leaderboardList = document.getElementById("leaderboard-list");
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const provider = new GoogleAuthProvider();
 
-    // Example matches (replace with real API later)
-    const matches = [
-      { id: "m1", home: "Team A", away: "Team B", time: "Today 18:00" },
-      { id: "m2", home: "Team C", away: "Team D", time: "Today 20:00" },
-    ];
+  // DOM Elements
+  const loginBtn = document.getElementById("login-btn");
+  const logoutBtn = document.getElementById("logout-btn");
+  const userInfo = document.getElementById("user-info");
+  const matchesTableBody = document.querySelector("#matches-table tbody");
+  const leaderboardBody = document.querySelector("#leaderboard-table tbody");
 
-    function displayMatches() {
-      matchesList.innerHTML = "";
-      matches.forEach(match => {
-        const div = document.createElement("div");
-        div.innerHTML = `
-          <strong>${match.home} vs ${match.away}</strong> - ${match.time}
-          <br>
-          <button onclick="predict('${match.id}')">Predict Win</button>
-        `;
-        matchesList.appendChild(div);
-      });
-    }
+  let currentUser = null;
 
-    loginBtn.addEventListener("click", () => signInWithPopup(auth, provider));
-    logoutBtn.addEventListener("click", () => signOut(auth));
+  // Sample matches (replace with API data later)
+  const matches = [
+    { id:1, teams:"Team A vs Team B" },
+    { id:2, teams:"Team C vs Team D" }
+  ];
 
-    onAuthStateChanged(auth, user => {
-      if (user) {
-        loginBtn.hidden = true;
-        logoutBtn.hidden = false;
-        displayMatches();
-        loadPredictions(user.uid);
-        loadLeaderboard();
-      } else {
-        loginBtn.hidden = false;
-        logoutBtn.hidden = true;
-        matchesList.innerHTML = "Please login to see matches.";
-        userPredictions.innerHTML = "No predictions yet.";
-        leaderboardList.innerHTML = "<li>Login to see leaderboard</li>";
-      }
+  // Display matches
+  function displayMatches() {
+    matchesTableBody.innerHTML = "";
+    matches.forEach(match => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${match.teams}</td>
+        <td>
+          <select id="pred-${match.id}">
+            <option value="">Select</option>
+            <option value="Team A">Team A</option>
+            <option value="Draw">Draw</option>
+            <option value="Team B">Team B</option>
+          </select>
+        </td>
+        <td><button onclick="submitPrediction(${match.id})">Predict</button></td>
+      `;
+      matchesTableBody.appendChild(tr);
+    });
+  }
+
+  // Submit prediction
+  window.submitPrediction = async (matchId) => {
+    if(!currentUser) return alert("Login first!");
+    const select = document.getElementById(`pred-${matchId}`);
+    const prediction = select.value;
+    if(!prediction) return alert("Select a prediction");
+
+    await addDoc(collection(db, "predictions"), {
+      user: currentUser.displayName,
+      matchId,
+      prediction,
+      timestamp: Date.now()
     });
 
-    window.predict = async function(matchId) {
-      const user = auth.currentUser;
-      if (!user) return alert("Login first");
+    alert("Prediction saved!");
+  };
 
-      const score = prompt("Enter your predicted score (e.g., 2-1):");
-      if (!score) return;
+  // Display leaderboard
+  function displayLeaderboard(data) {
+    leaderboardBody.innerHTML = "";
+    data.forEach(item => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${item.user}</td><td>${item.points || 0}</td>`;
+      leaderboardBody.appendChild(tr);
+    });
+  }
 
-      await addDoc(collection(db, "predictions"), {
-        userId: user.uid,
-        matchId,
-        score,
-        timestamp: Date.now()
-      });
+  // Listen to predictions and update leaderboard
+  const q = query(collection(db, "predictions"), orderBy("timestamp", "desc"));
+  onSnapshot(q, snapshot => {
+    const leaderboardMap = {};
+    snapshot.docs.forEach(doc => {
+      const data = doc.data();
+      leaderboardMap[data.user] = (leaderboardMap[data.user] || 0) + 1;
+    });
+    const leaderboardData = Object.keys(leaderboardMap).map(u => ({ user:u, points:leaderboardMap[u] }));
+    displayLeaderboard(leaderboardData);
+  });
 
-      loadPredictions(user.uid);
-      alert("Prediction saved!");
-    };
+  // Login
+  loginBtn.onclick = () => {
+    signInWithPopup(auth, provider)
+      .catch(err => alert(err.message));
+  };
 
-    async function loadPredictions(uid) {
-      const snapshot = await getDocs(collection(db, "predictions"));
-      const userDocs = snapshot.docs.filter(d => d.data().userId === uid);
-      userPredictions.innerHTML = userDocs.length 
-        ? "<ul>" + userDocs.map(d => `<li>${d.data().matchId}: ${d.data().score}</li>`).join("") + "</ul>" 
-        : "No predictions yet.";
+  // Logout
+  logoutBtn.onclick = () => {
+    signOut(auth);
+  };
+
+  // Auth state listener
+  onAuthStateChanged(auth, user => {
+    currentUser = user;
+    if(user){
+      loginBtn.style.display = "none";
+      logoutBtn.style.display = "inline-block";
+      userInfo.innerHTML = `Logged in as <b>${user.displayName}</b>`;
+    } else {
+      loginBtn.style.display = "inline-block";
+      logoutBtn.style.display = "none";
+      userInfo.innerHTML = "";
     }
+  });
 
-    function loadLeaderboard() {
-      const predictionsCol = collection(db, "predictions");
-      const q = query(predictionsCol);
-      onSnapshot(q, snapshot => {
-        const counts = {};
-        snapshot.docs.forEach(doc => {
-          const data = doc.data();
-          counts[data.userId] = (counts[data.userId] || 0) + 1;
-        });
-        leaderboardList.innerHTML = "";
-        Object.entries(counts)
-          .sort((a,b) => b[1]-a[1])
-          .forEach(([uid, score]) => {
-            const li = document.createElement("li");
-            li.textContent = `User: ${uid} - Predictions: ${score}`;
-            leaderboardList.appendChild(li);
-          });
-      });
-    }
-  </script>
+  displayMatches();
+</script>
+
 </body>
-</html>
+  </html>
