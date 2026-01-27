@@ -7,11 +7,12 @@
 <style>
   body { font-family: Arial, sans-serif; padding: 20px; background:#f9f9f9; }
   h1 { text-align:center; }
-  button { margin:5px; padding:8px 12px; }
+  button { margin:5px; padding:8px 12px; cursor:pointer; }
   #matches, #leaderboard { margin-top:20px; }
-  table { width:100%; border-collapse: collapse; }
+  table { width:100%; border-collapse: collapse; margin-top:10px; }
   th, td { border:1px solid #ccc; padding:8px; text-align:center; }
   th { background:#eee; }
+  select { padding:5px; }
 </style>
 </head>
 <body>
@@ -47,7 +48,6 @@
 
 <!-- Firebase SDK -->
 <script type="module">
-  // Import Firebase
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.2/firebase-app.js";
   import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.6.2/firebase-auth.js";
   import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.6.2/firebase-firestore.js";
@@ -76,35 +76,46 @@
 
   let currentUser = null;
 
-  // Sample matches (replace with API data later)
-  const matches = [
-    { id:1, teams:"Team A vs Team B" },
-    { id:2, teams:"Team C vs Team D" }
-  ];
+  // Fetch live matches from TheSportsDB
+  async function loadMatches() {
+    try {
+      const res = await fetch("https://www.thesportsdb.com/api/v1/json/1/eventsnextleague.php?id=4328");
+      const data = await res.json();
+      const matches = data.events.map((event, index) => ({
+        id: index+1,
+        teams: `${event.strHomeTeam} vs ${event.strAwayTeam}`,
+        date: event.dateEvent,
+        time: event.strTime
+      }));
+      displayMatches(matches);
+    } catch (err) {
+      console.error("Error loading matches:", err);
+      matchesTableBody.innerHTML = "<tr><td colspan='3'>Failed to load matches.</td></tr>";
+    }
+  }
 
-  // Display matches
-  function displayMatches() {
+  function displayMatches(matches) {
     matchesTableBody.innerHTML = "";
     matches.forEach(match => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${match.teams}</td>
+        <td>${match.teams} <br> <small>${match.date} ${match.time}</small></td>
         <td>
           <select id="pred-${match.id}">
             <option value="">Select</option>
-            <option value="Team A">Team A</option>
+            <option value="Home">Home</option>
             <option value="Draw">Draw</option>
-            <option value="Team B">Team B</option>
+            <option value="Away">Away</option>
           </select>
         </td>
-        <td><button onclick="submitPrediction(${match.id})">Predict</button></td>
+        <td><button onclick="submitPrediction(${match.id}, '${match.teams}')">Predict</button></td>
       `;
       matchesTableBody.appendChild(tr);
     });
   }
 
   // Submit prediction
-  window.submitPrediction = async (matchId) => {
+  window.submitPrediction = async (matchId, matchName) => {
     if(!currentUser) return alert("Login first!");
     const select = document.getElementById(`pred-${matchId}`);
     const prediction = select.value;
@@ -113,6 +124,7 @@
     await addDoc(collection(db, "predictions"), {
       user: currentUser.displayName,
       matchId,
+      matchName,
       prediction,
       timestamp: Date.now()
     });
@@ -125,12 +137,12 @@
     leaderboardBody.innerHTML = "";
     data.forEach(item => {
       const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${item.user}</td><td>${item.points || 0}</td>`;
+      tr.innerHTML = `<td>${item.user}</td><td>${item.points}</td>`;
       leaderboardBody.appendChild(tr);
     });
   }
 
-  // Listen to predictions and update leaderboard
+  // Listen to Firestore and update leaderboard
   const q = query(collection(db, "predictions"), orderBy("timestamp", "desc"));
   onSnapshot(q, snapshot => {
     const leaderboardMap = {};
@@ -143,17 +155,12 @@
   });
 
   // Login
-  loginBtn.onclick = () => {
-    signInWithPopup(auth, provider)
-      .catch(err => alert(err.message));
-  };
+  loginBtn.onclick = () => signInWithPopup(auth, provider).catch(err => alert(err.message));
 
   // Logout
-  logoutBtn.onclick = () => {
-    signOut(auth);
-  };
+  logoutBtn.onclick = () => signOut(auth);
 
-  // Auth state listener
+  // Auth state
   onAuthStateChanged(auth, user => {
     currentUser = user;
     if(user){
@@ -167,8 +174,10 @@
     }
   });
 
-  displayMatches();
+  // Load matches on page load
+  loadMatches();
+
 </script>
 
 </body>
-  </html>
+</html>
