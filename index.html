@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Runner Game - Animated</title>
+  <title>Runner Game - Coins Working</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
@@ -57,13 +57,13 @@ let score = 0;
 let coins = 0;
 let gameOver = false;
 
-// ---- Background ----
+// Background scroll
 let bgX = 0;
 const bgSpeed = 2;
 
-// ---- Player (sprite animation) ----
+// Player sprite (animated)
 const playerImg = new Image();
-playerImg.src = "https://i.imgur.com/8QfQY5K.png"; // running sprite (simplified)
+playerImg.src = "https://i.imgur.com/8QfQY5K.png"; // running sprite
 const player = {
   x: 50,
   y: 400,
@@ -74,11 +74,11 @@ const player = {
   jumpPower: -15,
   onGround: true,
   frame: 0,
-  frameCount: 4, // number of frames in sprite sheet
-  frameWidth: 40 // width of one frame
+  frameCount: 4, // frames in sprite sheet
+  frameWidth: 40
 };
 
-// ---- Obstacle ----
+// Obstacle
 const obstacle = {
   x: canvas.width,
   y: 420,
@@ -87,9 +87,7 @@ const obstacle = {
   speed: 4
 };
 
-// ---- Coin (image) ----
-const coinImg = new Image();
-coinImg.src = "https://i.imgur.com/sZqfG1i.png"; // small coin image
+// Coin as circle
 const coin = {
   x: canvas.width + 150,
   y: 380,
@@ -98,7 +96,7 @@ const coin = {
   collected: false
 };
 
-// ---- Controls ----
+// Controls
 document.addEventListener("touchstart", jump);
 document.addEventListener("keydown", e => { if(e.code==="Space") jump(); });
 
@@ -109,7 +107,7 @@ function jump() {
   }
 }
 
-// ---- Restart ----
+// Restart button
 const restartBtn = document.getElementById("restartBtn");
 restartBtn.addEventListener("click", () => {
   score = 0;
@@ -121,7 +119,7 @@ restartBtn.addEventListener("click", () => {
   update();
 });
 
-// ---- Update Loop ----
+// Update loop
 function update(){
   if(gameOver){
     restartBtn.style.display = "inline-block";
@@ -130,18 +128,18 @@ function update(){
 
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // ---- Background scrolling ----
-  ctx.fillStyle = "#70c5ce";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // Background scroll
+  ctx.fillStyle = "#70c5ce"; // ground color
+  ctx.fillRect(0,0,canvas.width,canvas.height);
   bgX -= bgSpeed;
   if(bgX <= -canvas.width) bgX = 0;
 
-  // ---- Player physics ----
+  // Player physics
   player.dy += player.gravity;
   player.y += player.dy;
   if(player.y >= 400){ player.y=400; player.dy=0; player.onGround=true; }
 
-  // ---- Obstacle movement ----
+  // Obstacle movement
   obstacle.x -= obstacle.speed;
   if(obstacle.x < -obstacle.width){
     obstacle.x = canvas.width;
@@ -150,14 +148,14 @@ function update(){
     if(score % 5 === 0) obstacle.speed += 0.5;
   }
 
-  // ---- Coin movement ----
+  // Coin movement
   coin.x -= obstacle.speed;
   if(coin.x < -coin.width){
     coin.x = canvas.width + Math.random()*200;
     coin.collected = false;
   }
 
-  // ---- Collision with coin ----
+  // Coin collision
   if(!coin.collected &&
      player.x < coin.x + coin.width &&
      player.x + player.width > coin.x &&
@@ -168,7 +166,7 @@ function update(){
     document.getElementById("coins").textContent = "Coins: " + coins;
   }
 
-  // ---- Collision with obstacle ----
+  // Obstacle collision
   if(player.x < obstacle.x + obstacle.width &&
      player.x + player.width > obstacle.x &&
      player.y < obstacle.y + obstacle.height &&
@@ -179,30 +177,29 @@ function update(){
     return;
   }
 
-  // ---- Draw player (animated) ----
+  // Draw player (animated)
   player.frame++;
   if(player.frame >= player.frameCount) player.frame = 0;
   ctx.drawImage(playerImg,
                 player.frame * player.frameWidth, 0, player.frameWidth, player.height,
                 player.x, player.y - player.height, player.width, player.height);
 
-  // ---- Draw obstacle ----
+  // Draw obstacle
   ctx.fillStyle = "red";
   ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
 
-  // ---- Draw coin ----
-  ctx.drawImage(coinImg, coin.x, coin.y, coin.width, coin.height);
+  // Draw coin (circle)
+  ctx.fillStyle = "gold";
+  ctx.beginPath();
+  ctx.arc(coin.x + coin.width/2, coin.y + coin.height/2, coin.width/2, 0, Math.PI*2);
+  ctx.fill();
 
   requestAnimationFrame(update);
 }
 
-// Wait for images to load
-playerImg.onload = function(){
-  coinImg.onload = function(){
-    update();
-  }
-}
-</script>
+// Wait for player sprite to load
+playerImg.onload = function(){ update(); }
 
+</script>
 </body>
 </html>
