@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Runner Game</title>
+<title>Runner Game with Sound</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 body { margin:0; background:#87CEEB; text-align:center; font-family:Arial; }
@@ -31,36 +31,36 @@ const ctx = canvas.getContext("2d");
 canvas.width = 360; canvas.height = 500;
 
 let score=0, coins=0, gameOver=false;
-
-// Player
-const player = {x:50,y:400,width:40,height:50,dy:0,gravity:1,jumpPower:-15,onGround:true};
+let soundUnlocked=false;
 
 // Sounds
 const jumpSound = new Audio("https://freesound.org/data/previews/331/331912_3248244-lq.mp3");
 const coinSound = new Audio("https://freesound.org/data/previews/146/146725_2615113-lq.mp3");
 const gameOverSound = new Audio("https://freesound.org/data/previews/276/276031_5121236-lq.mp3");
 
-// Unlock sounds on first tap/click (required for mobile)
-let soundUnlocked = false;
-function unlockSounds(){
+// Unlock audio on first tap/click
+function unlockAudio(){
   if(!soundUnlocked){
-    jumpSound.play(); jumpSound.pause(); jumpSound.currentTime=0;
-    coinSound.play(); coinSound.pause(); coinSound.currentTime=0;
-    gameOverSound.play(); gameOverSound.pause(); gameOverSound.currentTime=0;
-    soundUnlocked = true;
+    jumpSound.play().then(()=>jumpSound.pause()); jumpSound.currentTime=0;
+    coinSound.play().then(()=>coinSound.pause()); coinSound.currentTime=0;
+    gameOverSound.play().then(()=>gameOverSound.pause()); gameOverSound.currentTime=0;
+    soundUnlocked=true;
   }
 }
-document.addEventListener("touchstart", unlockSounds, {once:true});
-document.addEventListener("click", unlockSounds, {once:true});
+document.addEventListener("touchstart", unlockAudio, {once:true});
+document.addEventListener("click", unlockAudio, {once:true});
+
+// Player
+const player = {x:50,y:400,width:40,height:50,dy:0,gravity:1,jumpPower:-15,onGround:true};
 
 // Jump controls
 document.addEventListener("touchstart", jump);
 document.addEventListener("keydown", e => { if(e.code==="Space") jump(); });
-function jump(){ 
-  if(player.onGround){ 
-    player.dy = player.jumpPower; 
-    player.onGround = false; 
-    if(soundUnlocked) jumpSound.play(); 
+function jump(){
+  if(player.onGround){
+    player.dy = player.jumpPower;
+    player.onGround = false;
+    if(soundUnlocked) jumpSound.play();
   }
 }
 
@@ -88,7 +88,7 @@ restartBtn.addEventListener("click", ()=>{
   update();
 });
 
-// Game update loop
+// Game loop
 function update(){
   if(gameOver){ restartBtn.style.display="inline-block"; return; }
 
