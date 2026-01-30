@@ -2,8 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Runner Game - Scrolling Background</title>
+<title>Runner Game with Ads</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- AdSense verification -->
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5580404798212871"
+     crossorigin="anonymous"></script>
+
 <style>
 body { margin:0; background:#87CEEB; text-align:center; font-family:Arial; }
 canvas { display:block; margin:20px auto; border-radius:10px; }
@@ -24,7 +29,19 @@ canvas { display:block; margin:20px auto; border-radius:10px; }
 <p>Tap screen to jump</p>
 <button id="restartBtn">Restart</button>
 
+<!-- Responsive AdSense ad below canvas -->
+<ins class="adsbygoogle"
+     style="display:block"
+     data-ad-client="ca-pub-5580404798212871"
+     data-ad-slot="1234567890"  <!-- Replace with your Ad unit ID -->
+     data-ad-format="auto"
+     data-full-width-responsive="true"></ins>
 <script>
+     (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+<script>
+// Canvas setup
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 canvas.width = 360; canvas.height = 500;
@@ -37,7 +54,7 @@ const jumpSound = new Audio("https://freesound.org/data/previews/331/331912_3248
 const coinSound = new Audio("https://freesound.org/data/previews/146/146725_2615113-lq.mp3");
 const gameOverSound = new Audio("https://freesound.org/data/previews/276/276031_5121236-lq.mp3");
 
-// Unlock sounds after first tap
+// Unlock sounds on first tap (mobile)
 document.addEventListener("touchstart", () => {
   if(!soundUnlocked){
     jumpSound.play(); jumpSound.pause(); jumpSound.currentTime=0;
@@ -52,14 +69,14 @@ const playerImg = new Image();
 playerImg.src = "https://i.imgur.com/lXo8V6I.png";
 const player = {x:50,y:400,width:40,height:50,dy:0,gravity:1,jumpPower:-15,onGround:true};
 
-// Controls
+// Jump controls
 document.addEventListener("touchstart", jump);
 document.addEventListener("keydown", e => { if(e.code==="Space") jump(); });
 function jump(){ if(player.onGround){ player.dy=player.jumpPower; player.onGround=false; if(soundUnlocked) jumpSound.play(); }}
 
-// Background image
+// Background
 const bgImg = new Image();
-bgImg.src = "https://i.imgur.com/rQH3N4k.png"; // example scrolling background
+bgImg.src = "https://i.imgur.com/rQH3N4k.png"; // scrolling background
 let bgX = 0;
 const bgSpeed = 2;
 
@@ -82,7 +99,7 @@ const restartBtn = document.getElementById("restartBtn");
 restartBtn.addEventListener("click", ()=>{
   score=0; coins=0; gameOver=false;
   obstacles.forEach((o,i)=>o.x = canvas.width + i*200);
-  coinsArr.forEach((c,i)=>c.x = canvas.width + 150 + i*200; c.collected=false);
+  coinsArr.forEach((c,i)=>{c.x = canvas.width + 150 + i*200; c.collected=false;});
   restartBtn.style.display="none";
   update();
 });
@@ -91,7 +108,7 @@ restartBtn.addEventListener("click", ()=>{
 function update(){
   if(gameOver){ restartBtn.style.display="inline-block"; return; }
 
-  // Background scrolling
+  // Scroll background
   bgX -= bgSpeed;
   if(bgX <= -canvas.width) bgX = 0;
   ctx.drawImage(bgImg, bgX, 0, canvas.width, canvas.height);
@@ -101,39 +118,23 @@ function update(){
   player.dy+=player.gravity; player.y+=player.dy;
   if(player.y>=400){ player.y=400; player.dy=0; player.onGround=true; }
 
-  // Obstacles movement
+  // Obstacles
   obstacles.forEach(o=>{
     o.x -= o.speed;
-    if(o.x<-o.width){
-      o.x = canvas.width + Math.random()*200;
-      score++; document.getElementById("score").textContent="Score: "+score;
-      if(score%5===0) o.speed += 0.5;
-    }
-    // Draw obstacle
+    if(o.x<-o.width){ o.x = canvas.width + Math.random()*200; score++; document.getElementById("score").textContent="Score: "+score; if(score%5===0) o.speed += 0.5; }
     ctx.fillStyle="red"; ctx.fillRect(o.x,o.y,o.width,o.height);
-
-    // Collision
     if(player.x<o.x+o.width && player.x+player.width>o.x && player.y<o.y+o.height && player.y+player.height>o.y){
-      gameOver=true; if(soundUnlocked) gameOverSound.play();
-      alert("Game Over! Score: "+score+" | Coins: "+coins);
-      restartBtn.style.display="inline-block"; return;
+      gameOver=true; if(soundUnlocked) gameOverSound.play(); alert("Game Over! Score: "+score+" | Coins: "+coins); restartBtn.style.display="inline-block"; return;
     }
   });
 
-  // Coins movement
+  // Coins
   coinsArr.forEach(c=>{
     c.x -= 4;
     if(c.x<-c.width){ c.x=canvas.width + Math.random()*400; c.collected=false; c.y = 300 + Math.random()*100; }
-
-    // Draw coin
-    if(!c.collected){
-      ctx.fillStyle="gold"; ctx.beginPath(); ctx.arc(c.x+c.width/2, c.y+c.height/2, c.width/2,0,Math.PI*2); ctx.fill();
-    }
-
-    // Collision with player
+    if(!c.collected){ ctx.fillStyle="gold"; ctx.beginPath(); ctx.arc(c.x+c.width/2, c.y+c.height/2, c.width/2,0,Math.PI*2); ctx.fill(); }
     if(!c.collected && player.x<c.x+c.width && player.x+player.width>c.x && player.y<c.y+c.height && player.y+player.height>c.y){
-      coins++; c.collected=true; document.getElementById("coins").textContent="Coins: "+coins;
-      if(soundUnlocked) coinSound.play();
+      coins++; c.collected=true; document.getElementById("coins").textContent="Coins: "+coins; if(soundUnlocked) coinSound.play();
     }
   });
 
@@ -143,7 +144,7 @@ function update(){
   requestAnimationFrame(update);
 }
 
-bgImg.onload = function(){ playerImg.onload=function(){ update(); } }
+bgImg.onload=function(){ playerImg.onload=function(){ update(); } }
 </script>
 </body>
 </html>
