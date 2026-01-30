@@ -1,25 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Runner Game with Sound</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { margin:0; background:#87CEEB; text-align:center; font-family:Arial; }
-    canvas { display:block; margin:20px auto; border-radius:10px; }
-    #score,#coins{ font-size:18px; font-weight:bold; margin:5px; }
-    #restartBtn{
-      display:none;
-      padding:10px 20px;
-      font-size:18px;
-      border:none;
-      border-radius:8px;
-      background-color:#00c853;
-      color:white;
-      cursor:pointer;
-      margin-top:10px;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Runner Game - Mobile Sounds</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body { margin:0; background:#87CEEB; text-align:center; font-family:Arial; }
+canvas { display:block; margin:20px auto; border-radius:10px; }
+#score,#coins{ font-size:18px; font-weight:bold; margin:5px; }
+#restartBtn{
+  display:none;
+  padding:10px 20px;
+  font-size:18px;
+  border:none;
+  border-radius:8px;
+  background-color:#00c853;
+  color:white;
+  cursor:pointer;
+  margin-top:10px;
+}
+</style>
 </head>
 <body>
 
@@ -37,15 +37,25 @@ canvas.width = 360; canvas.height = 500;
 
 let score=0, coins=0, gameOver=false;
 
-// Load sounds
+// Sounds
 const jumpSound = new Audio("https://freesound.org/data/previews/331/331912_3248244-lq.mp3");
 const coinSound = new Audio("https://freesound.org/data/previews/146/146725_2615113-lq.mp3");
 const gameOverSound = new Audio("https://freesound.org/data/previews/276/276031_5121236-lq.mp3");
+let soundUnlocked = false;
 
-// Player image
+// Unlock sounds on first tap
+document.addEventListener("touchstart", () => {
+  if(!soundUnlocked){
+    jumpSound.play(); jumpSound.pause(); jumpSound.currentTime=0;
+    coinSound.play(); coinSound.pause(); coinSound.currentTime=0;
+    gameOverSound.play(); gameOverSound.pause(); gameOverSound.currentTime=0;
+    soundUnlocked = true;
+  }
+}, {once:true});
+
+// Player
 const playerImg = new Image();
-playerImg.src = "https://i.imgur.com/lXo8V6I.png"; // runner image
-
+playerImg.src = "https://i.imgur.com/lXo8V6I.png";
 const player = {x:50,y:400,width:40,height:50,dy:0,gravity:1,jumpPower:-15,onGround:true};
 
 // Obstacle
@@ -60,18 +70,17 @@ document.addEventListener("keydown", e => { if(e.code==="Space") jump(); });
 
 function jump(){
   if(player.onGround){
-    player.dy=player.jumpPower;
+    player.dy = player.jumpPower;
     player.onGround=false;
-    jumpSound.play();
+    if(soundUnlocked) jumpSound.play();
   }
 }
 
-// Restart button
-const restartBtn=document.getElementById("restartBtn");
-restartBtn.addEventListener("click",()=>{
+// Restart
+const restartBtn = document.getElementById("restartBtn");
+restartBtn.addEventListener("click", ()=>{
   score=0; coins=0; gameOver=false;
-  obstacle.x=canvas.width;
-  coin.x=canvas.width+150;
+  obstacle.x=canvas.width; coin.x=canvas.width+150;
   restartBtn.style.display="none";
   update();
 });
@@ -103,13 +112,13 @@ function update(){
   if(!coin.collected && player.x<coin.x+coin.width && player.x+player.width>coin.x && player.y<coin.y+coin.height && player.y+player.height>coin.y){
     coins++; coin.collected=true;
     document.getElementById("coins").textContent="Coins: "+coins;
-    coinSound.play();
+    if(soundUnlocked) coinSound.play();
   }
 
   // Obstacle collision
   if(player.x<obstacle.x+obstacle.width && player.x+player.width>obstacle.x && player.y<obstacle.y+obstacle.height && player.y+player.height>obstacle.y){
     gameOver=true;
-    gameOverSound.play();
+    if(soundUnlocked) gameOverSound.play();
     alert("Game Over! Score: "+score+" | Coins: "+coins);
     restartBtn.style.display="inline-block";
     return;
@@ -129,7 +138,6 @@ function update(){
 }
 
 playerImg.onload=function(){ update(); }
-
 </script>
 </body>
 </html>
