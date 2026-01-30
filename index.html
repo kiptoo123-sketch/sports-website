@@ -35,14 +35,34 @@ let score=0, coins=0, gameOver=false;
 // Player
 const player = {x:50,y:400,width:40,height:50,dy:0,gravity:1,jumpPower:-15,onGround:true};
 
+// Sounds
+const jumpSound = new Audio("https://freesound.org/data/previews/331/331912_3248244-lq.mp3");
+const coinSound = new Audio("https://freesound.org/data/previews/146/146725_2615113-lq.mp3");
+const gameOverSound = new Audio("https://freesound.org/data/previews/276/276031_5121236-lq.mp3");
+
+// Unlock sounds on first tap/click (required for mobile)
+let soundUnlocked = false;
+function unlockSounds(){
+  if(!soundUnlocked){
+    jumpSound.play(); jumpSound.pause(); jumpSound.currentTime=0;
+    coinSound.play(); coinSound.pause(); coinSound.currentTime=0;
+    gameOverSound.play(); gameOverSound.pause(); gameOverSound.currentTime=0;
+    soundUnlocked = true;
+  }
+}
+document.addEventListener("touchstart", unlockSounds, {once:true});
+document.addEventListener("click", unlockSounds, {once:true});
+
 // Jump controls
 document.addEventListener("touchstart", jump);
 document.addEventListener("keydown", e => { if(e.code==="Space") jump(); });
-function jump(){ if(player.onGround){ player.dy=player.jumpPower; player.onGround=false; }}
-
-// Background
-let bgX = 0;
-const bgSpeed = 2;
+function jump(){ 
+  if(player.onGround){ 
+    player.dy = player.jumpPower; 
+    player.onGround = false; 
+    if(soundUnlocked) jumpSound.play(); 
+  }
+}
 
 // Obstacles
 let obstacles = [
@@ -68,7 +88,7 @@ restartBtn.addEventListener("click", ()=>{
   update();
 });
 
-// Update loop
+// Game update loop
 function update(){
   if(gameOver){ restartBtn.style.display="inline-block"; return; }
 
@@ -76,15 +96,9 @@ function update(){
   ctx.fillStyle="#87CEEB";
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  // Scroll background (simple rectangles)
-  ctx.fillStyle="#a0e1ff";
-  bgX -= bgSpeed;
-  if(bgX <= -canvas.width) bgX = 0;
-  ctx.fillRect(bgX,0,canvas.width,canvas.height);
-  ctx.fillRect(bgX+canvas.width,0,canvas.width,canvas.height);
-
   // Player physics
-  player.dy+=player.gravity; player.y+=player.dy;
+  player.dy += player.gravity;
+  player.y += player.dy;
   if(player.y>=400){ player.y=400; player.dy=0; player.onGround=true; }
 
   // Obstacles
@@ -92,8 +106,13 @@ function update(){
     o.x -= o.speed;
     if(o.x<-o.width){ o.x = canvas.width + Math.random()*200; score++; document.getElementById("score").textContent="Score: "+score; if(score%5===0) o.speed += 0.5; }
     ctx.fillStyle="red"; ctx.fillRect(o.x,o.y,o.width,o.height);
+
     if(player.x<o.x+o.width && player.x+player.width>o.x && player.y<o.y+o.height && player.y+player.height>o.y){
-      gameOver=true; alert("Game Over! Score: "+score+" | Coins: "+coins); restartBtn.style.display="inline-block"; return;
+      gameOver=true; 
+      if(soundUnlocked) gameOverSound.play(); 
+      alert("Game Over! Score: "+score+" | Coins: "+coins); 
+      restartBtn.style.display="inline-block"; 
+      return;
     }
   });
 
@@ -103,11 +122,12 @@ function update(){
     if(c.x<-c.width){ c.x=canvas.width + Math.random()*400; c.collected=false; c.y = 300 + Math.random()*100; }
     if(!c.collected){ ctx.fillStyle="gold"; ctx.beginPath(); ctx.arc(c.x+c.width/2, c.y+c.height/2, c.width/2,0,Math.PI*2); ctx.fill(); }
     if(!c.collected && player.x<c.x+c.width && player.x+player.width>c.x && player.y<c.y+c.height && player.y+player.height>c.y){
-      coins++; c.collected=true; document.getElementById("coins").textContent="Coins: "+coins;
+      coins++; c.collected=true; document.getElementById("coins").textContent="Coins: "+coins; 
+      if(soundUnlocked) coinSound.play();
     }
   });
 
-  // Draw player (blue rectangle)
+  // Draw player
   ctx.fillStyle="blue";
   ctx.fillRect(player.x,player.y-player.height,player.width,player.height);
 
