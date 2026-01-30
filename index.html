@@ -1,28 +1,29 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Runner Game</title>
+  <title>Runner Game with Character</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
     body {
       margin: 0;
-      background: #111;
-      color: white;
+      background: #87CEEB; /* sky color */
       text-align: center;
       font-family: Arial, sans-serif;
     }
 
     canvas {
-      background: #222;
       display: block;
       margin: 20px auto;
+      background: #70c5ce; /* ground color */
       border-radius: 10px;
     }
 
     #score {
       font-size: 18px;
+      font-weight: bold;
+      margin: 5px;
     }
   </style>
 </head>
@@ -43,12 +44,16 @@
     let score = 0;
     let gameOver = false;
 
-    // Player
+    // Load player image (running person)
+    const playerImg = new Image();
+    playerImg.src = "https://i.imgur.com/8QfQY5K.png"; // sample runner image
+
+    // Player object
     let player = {
       x: 50,
       y: 400,
-      width: 30,
-      height: 30,
+      width: 40,
+      height: 50,
       dy: 0,
       gravity: 1,
       jumpPower: -15,
@@ -101,9 +106,7 @@
         document.getElementById("score").textContent = "Score: " + score;
 
         // increase difficulty
-        if (score % 5 === 0) {
-          obstacle.speed += 0.5;
-        }
+        if (score % 5 === 0) obstacle.speed += 0.5;
       }
 
       // Collision detection
@@ -118,9 +121,8 @@
         location.reload();
       }
 
-      // Draw player
-      ctx.fillStyle = "lime";
-      ctx.fillRect(player.x, player.y, player.width, player.height);
+      // Draw player image
+      ctx.drawImage(playerImg, player.x, player.y - player.height, player.width, player.height);
 
       // Draw obstacle
       ctx.fillStyle = "red";
@@ -129,7 +131,10 @@
       requestAnimationFrame(update);
     }
 
-    update();
+    // Wait until player image is loaded
+    playerImg.onload = function() {
+      update();
+    };
   </script>
 
 </body>
