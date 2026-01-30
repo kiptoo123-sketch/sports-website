@@ -2,38 +2,22 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Runner Game - Coins Working</title>
+  <title>Runner Game with Sound</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body {
-      margin: 0;
-      background: #87CEEB;
-      text-align: center;
-      font-family: Arial, sans-serif;
-    }
-
-    canvas {
-      display: block;
-      margin: 20px auto;
-      border-radius: 10px;
-    }
-
-    #score, #coins {
-      font-size: 18px;
-      font-weight: bold;
-      margin: 5px;
-    }
-
-    #restartBtn {
-      display: none;
-      padding: 10px 20px;
-      font-size: 18px;
-      border: none;
-      border-radius: 8px;
-      background-color: #00c853;
-      color: white;
-      cursor: pointer;
-      margin-top: 10px;
+    body { margin:0; background:#87CEEB; text-align:center; font-family:Arial; }
+    canvas { display:block; margin:20px auto; border-radius:10px; }
+    #score,#coins{ font-size:18px; font-weight:bold; margin:5px; }
+    #restartBtn{
+      display:none;
+      padding:10px 20px;
+      font-size:18px;
+      border:none;
+      border-radius:8px;
+      background-color:#00c853;
+      color:white;
+      cursor:pointer;
+      margin-top:10px;
     }
   </style>
 </head>
@@ -49,156 +33,102 @@
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+canvas.width = 360; canvas.height = 500;
 
-canvas.width = 360;
-canvas.height = 500;
+let score=0, coins=0, gameOver=false;
 
-let score = 0;
-let coins = 0;
-let gameOver = false;
+// Load sounds
+const jumpSound = new Audio("https://freesound.org/data/previews/331/331912_3248244-lq.mp3");
+const coinSound = new Audio("https://freesound.org/data/previews/146/146725_2615113-lq.mp3");
+const gameOverSound = new Audio("https://freesound.org/data/previews/276/276031_5121236-lq.mp3");
 
-// Background scroll
-let bgX = 0;
-const bgSpeed = 2;
-
-// Player sprite (animated)
+// Player image
 const playerImg = new Image();
-playerImg.src = "https://i.imgur.com/8QfQY5K.png"; // running sprite
-const player = {
-  x: 50,
-  y: 400,
-  width: 40,
-  height: 50,
-  dy: 0,
-  gravity: 1,
-  jumpPower: -15,
-  onGround: true,
-  frame: 0,
-  frameCount: 4, // frames in sprite sheet
-  frameWidth: 40
-};
+playerImg.src = "https://i.imgur.com/lXo8V6I.png"; // runner image
+
+const player = {x:50,y:400,width:40,height:50,dy:0,gravity:1,jumpPower:-15,onGround:true};
 
 // Obstacle
-const obstacle = {
-  x: canvas.width,
-  y: 420,
-  width: 30,
-  height: 30,
-  speed: 4
-};
+const obstacle = {x:canvas.width,y:420,width:30,height:30,speed:4};
 
 // Coin as circle
-const coin = {
-  x: canvas.width + 150,
-  y: 380,
-  width: 20,
-  height: 20,
-  collected: false
-};
+const coin = {x:canvas.width+150,y:380,width:20,height:20,collected:false};
 
 // Controls
 document.addEventListener("touchstart", jump);
 document.addEventListener("keydown", e => { if(e.code==="Space") jump(); });
 
-function jump() {
+function jump(){
   if(player.onGround){
-    player.dy = player.jumpPower;
-    player.onGround = false;
+    player.dy=player.jumpPower;
+    player.onGround=false;
+    jumpSound.play();
   }
 }
 
 // Restart button
-const restartBtn = document.getElementById("restartBtn");
-restartBtn.addEventListener("click", () => {
-  score = 0;
-  coins = 0;
-  gameOver = false;
-  obstacle.x = canvas.width;
-  coin.x = canvas.width + 150;
-  restartBtn.style.display = "none";
+const restartBtn=document.getElementById("restartBtn");
+restartBtn.addEventListener("click",()=>{
+  score=0; coins=0; gameOver=false;
+  obstacle.x=canvas.width;
+  coin.x=canvas.width+150;
+  restartBtn.style.display="none";
   update();
 });
 
 // Update loop
 function update(){
-  if(gameOver){
-    restartBtn.style.display = "inline-block";
-    return;
-  }
+  if(gameOver){ restartBtn.style.display="inline-block"; return; }
 
   ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  // Background scroll
-  ctx.fillStyle = "#70c5ce"; // ground color
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-  bgX -= bgSpeed;
-  if(bgX <= -canvas.width) bgX = 0;
+  ctx.fillStyle="#70c5ce"; ctx.fillRect(0,0,canvas.width,canvas.height);
 
   // Player physics
-  player.dy += player.gravity;
-  player.y += player.dy;
-  if(player.y >= 400){ player.y=400; player.dy=0; player.onGround=true; }
+  player.dy+=player.gravity; player.y+=player.dy;
+  if(player.y>=400){ player.y=400; player.dy=0; player.onGround=true; }
 
   // Obstacle movement
-  obstacle.x -= obstacle.speed;
-  if(obstacle.x < -obstacle.width){
-    obstacle.x = canvas.width;
-    score++;
-    document.getElementById("score").textContent = "Score: " + score;
-    if(score % 5 === 0) obstacle.speed += 0.5;
+  obstacle.x-=obstacle.speed;
+  if(obstacle.x<-obstacle.width){
+    obstacle.x=canvas.width; score++;
+    document.getElementById("score").textContent="Score: "+score;
+    if(score%5===0) obstacle.speed+=0.5;
   }
 
   // Coin movement
-  coin.x -= obstacle.speed;
-  if(coin.x < -coin.width){
-    coin.x = canvas.width + Math.random()*200;
-    coin.collected = false;
-  }
+  coin.x-=obstacle.speed;
+  if(coin.x<-coin.width){ coin.x=canvas.width+Math.random()*200; coin.collected=false; }
 
   // Coin collision
-  if(!coin.collected &&
-     player.x < coin.x + coin.width &&
-     player.x + player.width > coin.x &&
-     player.y < coin.y + coin.height &&
-     player.y + player.height > coin.y){
-    coins++;
-    coin.collected = true;
-    document.getElementById("coins").textContent = "Coins: " + coins;
+  if(!coin.collected && player.x<coin.x+coin.width && player.x+player.width>coin.x && player.y<coin.y+coin.height && player.y+player.height>coin.y){
+    coins++; coin.collected=true;
+    document.getElementById("coins").textContent="Coins: "+coins;
+    coinSound.play();
   }
 
   // Obstacle collision
-  if(player.x < obstacle.x + obstacle.width &&
-     player.x + player.width > obstacle.x &&
-     player.y < obstacle.y + obstacle.height &&
-     player.y + player.height > obstacle.y){
-    gameOver = true;
+  if(player.x<obstacle.x+obstacle.width && player.x+player.width>obstacle.x && player.y<obstacle.y+obstacle.height && player.y+player.height>obstacle.y){
+    gameOver=true;
+    gameOverSound.play();
     alert("Game Over! Score: "+score+" | Coins: "+coins);
-    restartBtn.style.display = "inline-block";
+    restartBtn.style.display="inline-block";
     return;
   }
 
-  // Draw player (animated)
-  player.frame++;
-  if(player.frame >= player.frameCount) player.frame = 0;
-  ctx.drawImage(playerImg,
-                player.frame * player.frameWidth, 0, player.frameWidth, player.height,
-                player.x, player.y - player.height, player.width, player.height);
+  // Draw player
+  ctx.drawImage(playerImg,player.x,player.y-player.height,player.width,player.height);
 
   // Draw obstacle
-  ctx.fillStyle = "red";
-  ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+  ctx.fillStyle="red"; ctx.fillRect(obstacle.x,obstacle.y,obstacle.width,obstacle.height);
 
-  // Draw coin (circle)
-  ctx.fillStyle = "gold";
-  ctx.beginPath();
-  ctx.arc(coin.x + coin.width/2, coin.y + coin.height/2, coin.width/2, 0, Math.PI*2);
-  ctx.fill();
+  // Draw coin
+  ctx.fillStyle="gold"; ctx.beginPath();
+  ctx.arc(coin.x+coin.width/2,coin.y+coin.height/2,coin.width/2,0,Math.PI*2); ctx.fill();
 
   requestAnimationFrame(update);
 }
 
-// Wait for player sprite to load
-playerImg.onload = function(){ update(); }
+playerImg.onload=function(){ update(); }
 
 </script>
 </body>
