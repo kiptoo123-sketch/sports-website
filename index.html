@@ -2,13 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Runner Game with Coins</title>
+  <title>Runner Game - Animated</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <style>
     body {
       margin: 0;
-      background: #87CEEB; /* sky color */
+      background: #87CEEB;
       text-align: center;
       font-family: Arial, sans-serif;
     }
@@ -16,7 +15,6 @@
     canvas {
       display: block;
       margin: 20px auto;
-      background: #70c5ce; /* ground color */
       border-radius: 10px;
     }
 
@@ -41,148 +39,170 @@
 </head>
 <body>
 
-  <h2>🏃 Runner Game</h2>
-  <canvas id="gameCanvas"></canvas>
-  <p id="score">Score: 0</p>
-  <p id="coins">Coins: 0</p>
-  <p>Tap screen to jump</p>
-  <button id="restartBtn">Restart</button>
+<h2>🏃 Runner Game</h2>
+<canvas id="gameCanvas"></canvas>
+<p id="score">Score: 0</p>
+<p id="coins">Coins: 0</p>
+<p>Tap screen to jump</p>
+<button id="restartBtn">Restart</button>
 
-  <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
 
-    canvas.width = 360;
-    canvas.height = 500;
+canvas.width = 360;
+canvas.height = 500;
 
-    let score = 0;
-    let coins = 0;
-    let gameOver = false;
+let score = 0;
+let coins = 0;
+let gameOver = false;
 
-    // Player image
-    const playerImg = new Image();
-    playerImg.src = "https://i.imgur.com/8QfQY5K.png";
+// ---- Background ----
+let bgX = 0;
+const bgSpeed = 2;
 
-    // Player object
-    let player = {
-      x: 50,
-      y: 400,
-      width: 40,
-      height: 50,
-      dy: 0,
-      gravity: 1,
-      jumpPower: -15,
-      onGround: true
-    };
+// ---- Player (sprite animation) ----
+const playerImg = new Image();
+playerImg.src = "https://i.imgur.com/8QfQY5K.png"; // running sprite (simplified)
+const player = {
+  x: 50,
+  y: 400,
+  width: 40,
+  height: 50,
+  dy: 0,
+  gravity: 1,
+  jumpPower: -15,
+  onGround: true,
+  frame: 0,
+  frameCount: 4, // number of frames in sprite sheet
+  frameWidth: 40 // width of one frame
+};
 
-    // Obstacle
-    let obstacle = {
-      x: canvas.width,
-      y: 420,
-      width: 30,
-      height: 30,
-      speed: 4
-    };
+// ---- Obstacle ----
+const obstacle = {
+  x: canvas.width,
+  y: 420,
+  width: 30,
+  height: 30,
+  speed: 4
+};
 
-    // Coin
-    let coin = {
-      x: canvas.width + 150,
-      y: 380,
-      width: 20,
-      height: 20,
-      collected: false
-    };
+// ---- Coin (image) ----
+const coinImg = new Image();
+coinImg.src = "https://i.imgur.com/sZqfG1i.png"; // small coin image
+const coin = {
+  x: canvas.width + 150,
+  y: 380,
+  width: 20,
+  height: 20,
+  collected: false
+};
 
-    // Controls
-    document.addEventListener("touchstart", jump);
-    document.addEventListener("keydown", e => { if(e.code==="Space") jump(); });
+// ---- Controls ----
+document.addEventListener("touchstart", jump);
+document.addEventListener("keydown", e => { if(e.code==="Space") jump(); });
 
-    function jump() {
-      if (player.onGround) {
-        player.dy = player.jumpPower;
-        player.onGround = false;
-      }
-    }
+function jump() {
+  if(player.onGround){
+    player.dy = player.jumpPower;
+    player.onGround = false;
+  }
+}
 
-    // Restart button
-    const restartBtn = document.getElementById("restartBtn");
-    restartBtn.addEventListener("click", () => {
-      score = 0;
-      coins = 0;
-      gameOver = false;
-      obstacle.x = canvas.width;
-      coin.x = canvas.width + 150;
-      restartBtn.style.display = "none";
-      update();
-    });
+// ---- Restart ----
+const restartBtn = document.getElementById("restartBtn");
+restartBtn.addEventListener("click", () => {
+  score = 0;
+  coins = 0;
+  gameOver = false;
+  obstacle.x = canvas.width;
+  coin.x = canvas.width + 150;
+  restartBtn.style.display = "none";
+  update();
+});
 
-    function update() {
-      if(gameOver) {
-        restartBtn.style.display = "inline-block";
-        return;
-      }
+// ---- Update Loop ----
+function update(){
+  if(gameOver){
+    restartBtn.style.display = "inline-block";
+    return;
+  }
 
-      ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-      // Player physics
-      player.dy += player.gravity;
-      player.y += player.dy;
-      if(player.y >= 400){ player.y=400; player.dy=0; player.onGround=true; }
+  // ---- Background scrolling ----
+  ctx.fillStyle = "#70c5ce";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  bgX -= bgSpeed;
+  if(bgX <= -canvas.width) bgX = 0;
 
-      // Obstacle movement
-      obstacle.x -= obstacle.speed;
-      if(obstacle.x < -obstacle.width){
-        obstacle.x = canvas.width;
-        score++;
-        document.getElementById("score").textContent = "Score: " + score;
-        if(score % 5 === 0) obstacle.speed += 0.5;
-      }
+  // ---- Player physics ----
+  player.dy += player.gravity;
+  player.y += player.dy;
+  if(player.y >= 400){ player.y=400; player.dy=0; player.onGround=true; }
 
-      // Coin movement
-      coin.x -= obstacle.speed;
-      if(coin.x < -coin.width){
-        coin.x = canvas.width + Math.random()*200;
-        coin.collected = false;
-      }
+  // ---- Obstacle movement ----
+  obstacle.x -= obstacle.speed;
+  if(obstacle.x < -obstacle.width){
+    obstacle.x = canvas.width;
+    score++;
+    document.getElementById("score").textContent = "Score: " + score;
+    if(score % 5 === 0) obstacle.speed += 0.5;
+  }
 
-      // Collision with coin
-      if(!coin.collected &&
-         player.x < coin.x + coin.width &&
-         player.x + player.width > coin.x &&
-         player.y < coin.y + coin.height &&
-         player.y + player.height > coin.y){
-        coins++;
-        coin.collected = true;
-        document.getElementById("coins").textContent = "Coins: " + coins;
-      }
+  // ---- Coin movement ----
+  coin.x -= obstacle.speed;
+  if(coin.x < -coin.width){
+    coin.x = canvas.width + Math.random()*200;
+    coin.collected = false;
+  }
 
-      // Collision with obstacle
-      if(player.x < obstacle.x + obstacle.width &&
-         player.x + player.width > obstacle.x &&
-         player.y < obstacle.y + obstacle.height &&
-         player.y + player.height > obstacle.y){
-        gameOver = true;
-        alert("Game Over! Score: "+score+" | Coins: "+coins);
-        restartBtn.style.display = "inline-block";
-        return;
-      }
+  // ---- Collision with coin ----
+  if(!coin.collected &&
+     player.x < coin.x + coin.width &&
+     player.x + player.width > coin.x &&
+     player.y < coin.y + coin.height &&
+     player.y + player.height > coin.y){
+    coins++;
+    coin.collected = true;
+    document.getElementById("coins").textContent = "Coins: " + coins;
+  }
 
-      // Draw player
-      ctx.drawImage(playerImg, player.x, player.y - player.height, player.width, player.height);
+  // ---- Collision with obstacle ----
+  if(player.x < obstacle.x + obstacle.width &&
+     player.x + player.width > obstacle.x &&
+     player.y < obstacle.y + obstacle.height &&
+     player.y + player.height > obstacle.y){
+    gameOver = true;
+    alert("Game Over! Score: "+score+" | Coins: "+coins);
+    restartBtn.style.display = "inline-block";
+    return;
+  }
 
-      // Draw obstacle
-      ctx.fillStyle="red";
-      ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+  // ---- Draw player (animated) ----
+  player.frame++;
+  if(player.frame >= player.frameCount) player.frame = 0;
+  ctx.drawImage(playerImg,
+                player.frame * player.frameWidth, 0, player.frameWidth, player.height,
+                player.x, player.y - player.height, player.width, player.height);
 
-      // Draw coin
-      ctx.fillStyle="yellow";
-      ctx.fillRect(coin.x, coin.y, coin.width, coin.height);
+  // ---- Draw obstacle ----
+  ctx.fillStyle = "red";
+  ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
 
-      requestAnimationFrame(update);
-    }
+  // ---- Draw coin ----
+  ctx.drawImage(coinImg, coin.x, coin.y, coin.width, coin.height);
 
-    playerImg.onload = function() { update(); }
+  requestAnimationFrame(update);
+}
 
-  </script>
+// Wait for images to load
+playerImg.onload = function(){
+  coinImg.onload = function(){
+    update();
+  }
+}
+</script>
+
 </body>
 </html>
