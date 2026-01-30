@@ -1,165 +1,136 @@
  <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Betika-Style Predictor</title>
-<style>
-body { font-family: Arial, sans-serif; margin: 20px; }
-button { padding:5px 10px; cursor:pointer; margin-left:5px; }
-table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-th, td { border:1px solid #ccc; padding:10px; text-align:center; }
-img { vertical-align: middle; }
-</style>
+  <meta charset="UTF-8">
+  <title>Runner Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: white;
+      text-align: center;
+      font-family: Arial, sans-serif;
+    }
+
+    canvas {
+      background: #222;
+      display: block;
+      margin: 20px auto;
+      border-radius: 10px;
+    }
+
+    #score {
+      font-size: 18px;
+    }
+  </style>
 </head>
 <body>
 
-<h1>Betika-Style Predictor</h1>
+  <h2>🏃 Runner Game</h2>
+  <canvas id="gameCanvas"></canvas>
+  <p id="score">Score: 0</p>
+  <p>Tap screen to jump</p>
 
-<!-- Login -->
-<button id="login-btn">Login with Google</button>
-<button id="logout-btn" style="display:none;">Logout</button>
-<div id="user-info" style="margin-top:10px;"></div>
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
 
-<!-- Matches -->
-<h2>Matches</h2>
-<table id="matches-table">
-<tr><th>Match</th><th>Odds</th><th>Prediction</th><th>Action</th></tr>
-</table>
+    canvas.width = 360;
+    canvas.height = 500;
 
-<!-- Leaderboard -->
-<h2>Leaderboard</h2>
-<table id="leaderboard-table">
-<tr><th>User</th><th>Points</th></tr>
-</table>
+    let score = 0;
+    let gameOver = false;
 
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    // Player
+    let player = {
+      x: 50,
+      y: 400,
+      width: 30,
+      height: 30,
+      dy: 0,
+      gravity: 1,
+      jumpPower: -15,
+      onGround: true
+    };
 
-<script>
-// --- Firebase config ---
-const firebaseConfig = {
-  apiKey: "AIzaSyDyqTVq8hDjWatJBG4uVgTGaPA6TZ5yA_s",
-  authDomain: "betika-style-predictor.firebaseapp.com",
-  projectId: "betika-style-predictor",
-  storageBucket: "betika-style-predictor.firebasestorage.app",
-  messagingSenderId: "1081822274358",
-  appId: "1:1081822274358:web:cfd0d79f9d1c6e5fd68997"
-};
+    // Obstacle
+    let obstacle = {
+      x: canvas.width,
+      y: 420,
+      width: 30,
+      height: 30,
+      speed: 4
+    };
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
-const provider = new firebase.auth.GoogleAuthProvider();
+    // Jump controls
+    document.addEventListener("touchstart", jump);
+    document.addEventListener("keydown", e => {
+      if (e.code === "Space") jump();
+    });
 
-const loginBtn = document.getElementById("login-btn");
-const logoutBtn = document.getElementById("logout-btn");
-const userInfo = document.getElementById("user-info");
-const matchesTable = document.getElementById("matches-table");
-const leaderboardTable = document.getElementById("leaderboard-table");
-
-// --- Login / Logout ---
-loginBtn.onclick = () => auth.signInWithPopup(provider).catch(e=>alert(e.message));
-logoutBtn.onclick = () => auth.signOut();
-
-auth.onAuthStateChanged(user => {
-  if(user){
-    loginBtn.style.display = "none";
-    logoutBtn.style.display = "inline-block";
-    userInfo.innerHTML = `Logged in as <b>${user.displayName}</b>`;
-
-    loadMatches();
-    loadLeaderboard();
-  } else {
-    loginBtn.style.display = "inline-block";
-    logoutBtn.style.display = "none";
-    userInfo.innerHTML = "";
-    matchesTable.innerHTML = "<tr><th>Match</th><th>Odds</th><th>Prediction</th><th>Action</th></tr>";
-    leaderboardTable.innerHTML = "<tr><th>User</th><th>Points</th></tr>";
-  }
-});
-
-// --- Load Matches from Firebase Function ---
-async function loadMatches(){
-  matchesTable.innerHTML = "<tr><th>Match</th><th>Odds</th><th>Prediction</th><th>Action</th></tr>";
-  try {
-    // Replace with your deployed Firebase Function URL
-    const functionURL = "https://us-central1-your-project.cloudfunctions.net/getMatches";
-    const leagues = [39, 140]; // EPL + La Liga
-    for(const league of leagues){
-      const res = await fetch(`${functionURL}?league=${league}&season=2025`);
-      const data = await res.json();
-      const fixtures = data.response;
-
-      fixtures.forEach(f => {
-        const row = matchesTable.insertRow();
-        const home = f.teams.home.name;
-        const away = f.teams.away.name;
-        const homeLogo = f.teams.home.logo || "";
-        const awayLogo = f.teams.away.logo || "";
-
-        // Match with logos
-        row.insertCell(0).innerHTML = `<img src="${homeLogo}" width="30"> ${home} vs <img src="${awayLogo}" width="30"> ${away}`;
-
-        // Odds (placeholder if not returned)
-        row.insertCell(1).innerHTML = `
-          Home: ${f.odds?.home ?? "-"} | 
-          Draw: ${f.odds?.draw ?? "-"} | 
-          Away: ${f.odds?.away ?? "-"}`;
-
-        // Prediction
-        row.insertCell(2).innerHTML = `
-          <select id="pred-${f.fixture.id}">
-            <option value="1">Home</option>
-            <option value="X">Draw</option>
-            <option value="2">Away</option>
-          </select>`;
-
-        // Submit button
-        row.insertCell(3).innerHTML = `<button onclick="submitPrediction('${f.fixture.id}','${home} vs ${away}')">Submit</button>`;
-      });
+    function jump() {
+      if (player.onGround) {
+        player.dy = player.jumpPower;
+        player.onGround = false;
+      }
     }
-  } catch(e){
-    alert("Error loading matches: "+e.message);
-  }
-}
 
-// --- Submit prediction ---
-function submitPrediction(fixtureId, matchName){
-  const user = auth.currentUser;
-  if(!user) return alert("Login first!");
-  const prediction = document.getElementById(`pred-${fixtureId}`).value;
+    function update() {
+      if (gameOver) return;
 
-  db.collection("predictions").doc(fixtureId + "_" + user.uid).set({
-    user: user.displayName,
-    match: matchName,
-    prediction: prediction,
-    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-  }).then(()=> alert("Prediction submitted!"))
-  .catch(e=> alert("Error: "+e.message));
-}
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-// --- Load leaderboard ---
-function loadLeaderboard(){
-  db.collection("predictions").get().then(snapshot => {
-    const pointsMap = {};
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      pointsMap[data.user] = (pointsMap[data.user] || 0) + 1; // +1 per prediction
-    });
+      // Player physics
+      player.dy += player.gravity;
+      player.y += player.dy;
 
-    leaderboardTable.innerHTML = "<tr><th>User</th><th>Points</th></tr>";
-    Object.keys(pointsMap).sort((a,b)=> pointsMap[b]-pointsMap[a]).forEach(u=>{
-      const row = leaderboardTable.insertRow();
-      row.insertCell(0).innerText = u;
-      row.insertCell(1).innerText = pointsMap[u];
-    });
-  });
-}
-</script>
+      if (player.y >= 400) {
+        player.y = 400;
+        player.dy = 0;
+        player.onGround = true;
+      }
+
+      // Obstacle movement
+      obstacle.x -= obstacle.speed;
+
+      if (obstacle.x < -obstacle.width) {
+        obstacle.x = canvas.width;
+        score++;
+        document.getElementById("score").textContent = "Score: " + score;
+
+        // increase difficulty
+        if (score % 5 === 0) {
+          obstacle.speed += 0.5;
+        }
+      }
+
+      // Collision detection
+      if (
+        player.x < obstacle.x + obstacle.width &&
+        player.x + player.width > obstacle.x &&
+        player.y < obstacle.y + obstacle.height &&
+        player.y + player.height > obstacle.y
+      ) {
+        gameOver = true;
+        alert("Game Over! Score: " + score);
+        location.reload();
+      }
+
+      // Draw player
+      ctx.fillStyle = "lime";
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+
+      // Draw obstacle
+      ctx.fillStyle = "red";
+      ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+
+      requestAnimationFrame(update);
+    }
+
+    update();
+  </script>
 
 </body>
 </html>
