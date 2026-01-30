@@ -5,7 +5,7 @@
   <title>🏃 Runner Game</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- ✅ AdSense verification (SAFE – does not affect game) -->
+  <!-- ✅ AdSense verification (safe during review) -->
   <meta name="google-adsense-account" content="ca-pub-5580404798212871">
 
   <style>
@@ -80,6 +80,9 @@
 
 <h2>🏃 Runner Game</h2>
 
+<!-- 🔊 Enable sound button (required for mobile) -->
+<button id="soundBtn">🔊 Enable Sound</button>
+
 <div id="info">
   Score: <span id="score">0</span> |
   Coins: <span id="coins">0</span>
@@ -93,38 +96,45 @@
 <p>Tap screen or press SPACE to jump</p>
 
 <!-- Sounds -->
-<audio id="jumpSound">
-  <source src="https://cdn.pixabay.com/audio/2022/03/15/audio_2a45d0c5f6.mp3" type="audio/mpeg">
-</audio>
-
-<audio id="coinSound">
-  <source src="https://cdn.pixabay.com/audio/2022/03/10/audio_6a5d3fbc5c.mp3" type="audio/mpeg">
-</audio>
+<audio id="jumpSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_2a45d0c5f6.mp3"></audio>
+<audio id="coinSound" src="https://cdn.pixabay.com/audio/2022/03/10/audio_6a5d3fbc5c.mp3"></audio>
 
 <script>
   const runner = document.getElementById("runner");
   const game = document.getElementById("game");
   const scoreEl = document.getElementById("score");
   const coinsEl = document.getElementById("coins");
+  const soundBtn = document.getElementById("soundBtn");
+
   const jumpSound = document.getElementById("jumpSound");
   const coinSound = document.getElementById("coinSound");
 
   let score = 0;
   let coins = 0;
   let isAlive = true;
+  let soundEnabled = false;
+
+  // Enable sound on mobile
+  soundBtn.addEventListener("click", () => {
+    soundEnabled = true;
+    jumpSound.play().then(() => {
+      jumpSound.pause();
+      jumpSound.currentTime = 0;
+    }).catch(()=>{});
+    soundBtn.textContent = "🔊 Sound ON";
+    soundBtn.disabled = true;
+  });
 
   function jump() {
+    if (!isAlive) return;
     if (!runner.classList.contains("jump")) {
       runner.classList.add("jump");
-      jumpSound.play().catch(()=>{});
+      if (soundEnabled) jumpSound.play();
       setTimeout(() => runner.classList.remove("jump"), 600);
     }
   }
 
-  document.addEventListener("keydown", e => {
-    if (e.code === "Space") jump();
-  });
-
+  document.addEventListener("keydown", e => { if(e.code === "Space") jump(); });
   document.addEventListener("touchstart", jump);
 
   function createObstacle() {
@@ -134,15 +144,10 @@
     obs.textContent = "🧱";
     game.appendChild(obs);
 
-    let check = setInterval(() => {
+    const check = setInterval(() => {
       const r = runner.getBoundingClientRect();
       const o = obs.getBoundingClientRect();
-
-      if (
-        o.left < r.right &&
-        o.right > r.left &&
-        o.bottom > r.top
-      ) {
+      if (o.left < r.right && o.right > r.left && o.bottom > r.top) {
         isAlive = false;
         alert("Game Over!");
         clearInterval(check);
@@ -159,18 +164,13 @@
     coin.textContent = "🪙";
     game.appendChild(coin);
 
-    let check = setInterval(() => {
+    const check = setInterval(() => {
       const r = runner.getBoundingClientRect();
       const c = coin.getBoundingClientRect();
-
-      if (
-        c.left < r.right &&
-        c.right > r.left &&
-        c.bottom > r.top
-      ) {
+      if (c.left < r.right && c.right > r.left && c.bottom > r.top) {
         coins++;
         coinsEl.textContent = coins;
-        coinSound.play().catch(()=>{});
+        if (soundEnabled) coinSound.play();
         coin.remove();
         clearInterval(check);
       }
