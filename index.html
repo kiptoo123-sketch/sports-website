@@ -12,21 +12,33 @@ body{
   text-align:center;
   font-family:Arial, sans-serif;
 }
+
+#gameContainer{
+  position:relative;
+  width:360px;
+  margin:20px auto;
+}
+
 canvas{
   background:#fff;
   display:block;
-  margin:20px auto;
   border-radius:10px;
 }
+
 #restartBtn{
-  display:none;
-  padding:10px 20px;
-  font-size:18px;
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%, -50%);
+  padding:14px 26px;
+  font-size:20px;
   border:none;
-  border-radius:8px;
-  background:#00c853;
+  border-radius:10px;
+  background:#ff5252;
   color:white;
   cursor:pointer;
+  display:none;
+  z-index:10;
 }
 </style>
 </head>
@@ -34,54 +46,76 @@ canvas{
 <body>
 
 <h2>🏃 Runner Game</h2>
-<canvas id="game" width="360" height="500"></canvas>
+
+<div id="gameContainer">
+  <canvas id="game" width="360" height="500"></canvas>
+  <button id="restartBtn">Restart</button>
+</div>
+
 <p id="score">Score: 0</p>
 <p>Tap screen or press SPACE to jump</p>
-<button id="restartBtn">Restart</button>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const restartBtn = document.getElementById("restartBtn");
 
-/* ---------- SOUND ---------- */
+/* 🔊 SOUND (GUARANTEED) */
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-function playBeep(freq, duration){
+function beep(freq, time){
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.connect(gain);
   gain.connect(audioCtx.destination);
   osc.frequency.value = freq;
+  gain.gain.value = 0.2;
   osc.start();
-  gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-  osc.stop(audioCtx.currentTime + duration);
+  osc.stop(audioCtx.currentTime + time);
 }
 
-/* ---------- GAME STATE ---------- */
-let score, gameOver;
+/* GAME STATE */
+let score = 0;
+let gameOver = false;
 
-/* ---------- PLAYER ---------- */
+/* PLAYER */
 const player = {
-  x: 60,
-  y: 420,
-  width: 40,
-  height: 50,
-  dy: 0,
-  gravity: 0.8,
-  jump: -13,
-  onGround: true
+  x:60, y:420,
+  w:40, h:50,
+  dy:0,
+  gravity:0.8,
+  jump:-13,
+  onGround:true
 };
 
-/* ---------- OBSTACLE ---------- */
-let obstacle = {
-  x: canvas.width,
-  y: 440,
-  width: 30,
-  height: 30,
-  speed: 2.5
+/* OBSTACLE */
+const obstacle = {
+  x:360, y:440,
+  w:30, h:30,
+  speed:2.5   // medium speed
 };
 
-/* ---------- RESET GAME ---------- */
+/* CONTROLS */
+function jump(){
+  if(player.onGround && !gameOver){
+    player.dy = player.jump;
+    player.onGround = false;
+    beep(600,0.1);
+  }
+}
+
+document.addEventListener("touchstart", () => {
+  audioCtx.resume();
+  jump();
+});
+
+document.addEventListener("keydown", e=>{
+  if(e.code==="Space"){
+    audioCtx.resume();
+    jump();
+  }
+});
+
+/* RESET GAME */
 function resetGame(){
   score = 0;
   gameOver = false;
@@ -91,80 +125,59 @@ function resetGame(){
   obstacle.x = canvas.width;
   document.getElementById("score").textContent = "Score: 0";
   restartBtn.style.display = "none";
-  update();
+  loop();
 }
 
-/* ---------- CONTROLS ---------- */
-function jump(){
-  if(player.onGround && !gameOver){
-    player.dy = player.jump;
-    player.onGround = false;
-    playBeep(600, 0.1);
-  }
-}
+restartBtn.onclick = resetGame;
 
-document.addEventListener("touchstart", () => {
-  audioCtx.resume();
-  jump();
-});
-
-document.addEventListener("keydown", e => {
-  if(e.code === "Space"){
-    audioCtx.resume();
-    jump();
-  }
-});
-
-restartBtn.addEventListener("click", resetGame);
-
-/* ---------- GAME LOOP ---------- */
-function update(){
+/* GAME LOOP */
+function loop(){
   if(gameOver) return;
 
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  /* Player physics */
+  // Player physics
   player.dy += player.gravity;
   player.y += player.dy;
-
   if(player.y >= 420){
     player.y = 420;
     player.dy = 0;
     player.onGround = true;
   }
 
-  /* Draw player */
+  // Draw player
   ctx.fillStyle = "black";
-  ctx.fillRect(player.x, player.y - player.height, player.width, player.height);
+  ctx.fillRect(player.x, player.y-player.h, player.w, player.h);
 
-  /* Obstacle */
+  // Obstacle
   obstacle.x -= obstacle.speed;
-  if(obstacle.x < -obstacle.width){
+  if(obstacle.x < -obstacle.w){
     obstacle.x = canvas.width;
     score++;
     document.getElementById("score").textContent = "Score: " + score;
   }
 
   ctx.fillStyle = "red";
-  ctx.fillRect(obstacle.x, obstacle.y - obstacle.height, obstacle.width, obstacle.height);
+  ctx.fillRect(obstacle.x, obstacle.y-obstacle.h, obstacle.w, obstacle.h);
 
-  /* Collision */
+  // Collision
   if(
-    player.x < obstacle.x + obstacle.width &&
-    player.x + player.width > obstacle.x &&
+    player.x < obstacle.x + obstacle.w &&
+    player.x + player.w > obstacle.x &&
     player.y < obstacle.y &&
-    player.y + player.height > obstacle.y - obstacle.height
+    player.y + player.h > obstacle.y - obstacle.h
   ){
     gameOver = true;
-    playBeep(200, 0.5);
-    restartBtn.style.display = "inline-block";
+    beep(200,0.5);
+    restartBtn.style.display = "block";   // 🔁 ALWAYS SHOWS
+    return;
   }
 
-  requestAnimationFrame(update);
+  requestAnimationFrame(loop);
 }
 
-/* START GAME */
-resetGame();
+/* START */
+loop();
 </script>
 
 </body>
