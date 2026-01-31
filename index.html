@@ -2,112 +2,136 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Simple Runner Game</title>
+<title>Runner Game</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
-body {
-  margin: 0;
-  text-align: center;
-  background: #87CEEB;
-  font-family: Arial, sans-serif;
+body{
+  margin:0;
+  background:#87CEEB;
+  text-align:center;
+  font-family:Arial, sans-serif;
 }
-canvas {
-  background: #fff;
-  display: block;
-  margin: 20px auto;
-  border-radius: 10px;
+canvas{
+  background:#fff;
+  display:block;
+  margin:20px auto;
+  border-radius:10px;
 }
 </style>
 </head>
 
 <body>
 
-<h2>🏃 Simple Runner Game</h2>
-<canvas id="gameCanvas" width="360" height="500"></canvas>
+<h2>🏃 Runner Game</h2>
+<canvas id="game" width="360" height="500"></canvas>
 <p id="score">Score: 0</p>
-<p>Tap or press SPACE to jump</p>
+<p>Tap screen or press SPACE to jump</p>
 
 <script>
-const canvas = document.getElementById("gameCanvas");
+const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
+/* ---------- SOUND (BUILT-IN, GUARANTEED) ---------- */
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playBeep(freq, duration){
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.frequency.value = freq;
+  osc.start();
+  gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + duration);
+}
+
+/* ---------- GAME STATE ---------- */
 let score = 0;
 let gameOver = false;
 
-/* PLAYER */
+/* ---------- PLAYER ---------- */
 const player = {
-  x: 50,
-  y: 400,
+  x: 60,
+  y: 420,
   width: 40,
   height: 50,
   dy: 0,
   gravity: 0.8,
-  jumpPower: -13,
+  jump: -13,
   onGround: true
 };
 
-/* OBSTACLE */
+/* ---------- OBSTACLE ---------- */
 let obstacle = {
   x: canvas.width,
-  y: 420,
+  y: 440,
   width: 30,
   height: 30,
-  speed: 2.5
+  speed: 2.5   // MEDIUM SPEED
 };
 
-/* CONTROLS */
-document.addEventListener("keydown", e => {
-  if (e.code === "Space") jump();
-});
-document.addEventListener("touchstart", jump);
-
-function jump() {
-  if (player.onGround) {
-    player.dy = player.jumpPower;
+/* ---------- CONTROLS ---------- */
+function jump(){
+  if(player.onGround){
+    player.dy = player.jump;
     player.onGround = false;
+    playBeep(600, 0.1); // jump sound
   }
 }
 
-/* GAME LOOP */
-function update() {
-  if (gameOver) return;
+document.addEventListener("touchstart", () => {
+  audioCtx.resume(); // unlock sound
+  jump();
+});
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+document.addEventListener("keydown", e => {
+  if(e.code === "Space"){
+    audioCtx.resume();
+    jump();
+  }
+});
 
-  /* PLAYER PHYSICS */
+/* ---------- GAME LOOP ---------- */
+function update(){
+  if(gameOver) return;
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  /* Player physics */
   player.dy += player.gravity;
   player.y += player.dy;
 
-  if (player.y >= 400) {
-    player.y = 400;
+  if(player.y >= 420){
+    player.y = 420;
     player.dy = 0;
     player.onGround = true;
   }
 
-  /* DRAW PLAYER */
+  /* Draw player (VISIBLE RUNNER) */
   ctx.fillStyle = "black";
   ctx.fillRect(player.x, player.y - player.height, player.width, player.height);
 
-  /* MOVE OBSTACLE */
+  /* Obstacle */
   obstacle.x -= obstacle.speed;
-  if (obstacle.x < -obstacle.width) {
+  if(obstacle.x < -obstacle.width){
     obstacle.x = canvas.width;
     score++;
     document.getElementById("score").textContent = "Score: " + score;
   }
 
-  /* DRAW OBSTACLE */
   ctx.fillStyle = "red";
-  ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+  ctx.fillRect(obstacle.x, obstacle.y - obstacle.height, obstacle.width, obstacle.height);
 
-  /* COLLISION */
-  if (
+  /* Collision */
+  if(
     player.x < obstacle.x + obstacle.width &&
     player.x + player.width > obstacle.x &&
-    player.y < obstacle.y + obstacle.height &&
-    player.y + player.height > obstacle.y
-  ) {
+    player.y < obstacle.y &&
+    player.y + player.height > obstacle.y - obstacle.height
+  ){
     gameOver = true;
+    playBeep(200, 0.5); // game over sound
     alert("Game Over! Score: " + score);
   }
 
