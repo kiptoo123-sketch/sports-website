@@ -2,43 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Runner Game with Person</title>
+<title>Runner Game - Person</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-body {
-  margin:0;
-  background:#87CEEB;
-  font-family: Arial, sans-serif;
-  text-align: center;
-}
-#gameContainer {
-  position: relative;
-  width: 360px;
-  margin: 20px auto;
-}
-canvas {
-  display: block;
-  border-radius: 10px;
-}
+body { margin:0; background:#87CEEB; font-family:Arial; text-align:center; }
+#gameContainer { position:relative; width:360px; margin:20px auto; }
+canvas { display:block; border-radius:10px; }
 #restartBtn {
-  position: absolute;
-  top:50%;
-  left:50%;
-  transform: translate(-50%, -50%);
-  padding: 14px 26px;
-  font-size: 20px;
-  border:none;
-  border-radius: 10px;
-  background: #ff5252;
-  color: white;
-  cursor:pointer;
-  z-index: 10;
-  display: none;
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  padding:14px 26px; font-size:20px; border:none; border-radius:10px;
+  background:#ff5252; color:white; cursor:pointer; display:none; z-index:10;
 }
 </style>
 </head>
-
 <body>
 
 <h2>🏃 Runner Game</h2>
@@ -51,7 +28,6 @@ canvas {
 <p>Tap or press SPACE to jump</p>
 
 <script>
-// CANVAS
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const restartBtn = document.getElementById("restartBtn");
@@ -69,23 +45,18 @@ function beep(freq,time){
 }
 
 // GAME STATE
-let score = 0;
-let coinsCollected = 0;
-let gameOver = false;
+let score=0, coinsCollected=0, gameOver=false;
 
 // PLAYER
-const player = {
-  x:60, y:420,
-  w:40, h:50,
-  dy:0, gravity:0.8, jump:-16, onGround:true
-};
+const player = {x:60, y:420, w:40, h:50, dy:0, gravity:0.8, jump:-16, onGround:true};
 
-// RUNNER IMAGE
-const playerImg = new Image();
-playerImg.src = "https://i.imgur.com/lXo8V6I.png"; // running person sprite
+// RUNNER SPRITE (4 frames)
+const playerSprite = new Image();
+playerSprite.src = "https://i.imgur.com/2d4eYqS.png"; // Example 4-frame running sprite
+let frame = 0, frameCount = 4, frameSpeed=6, frameTicker=0;
 
-// OBSTACLES
-const obstacle = {x:360, y:440, w:30, h:30, speed:2.5};
+// OBSTACLE
+const obstacle={x:360,y:440,w:30,h:30,speed:2.5};
 
 // COINS
 let coins = [
@@ -95,80 +66,63 @@ let coins = [
 ];
 
 // BACKGROUND
-let bgX = 0;
-const bgSpeed = 1.5;
+let bgX=0, bgSpeed=1.5;
 
 // CONTROLS
-function jump(){
-  if(player.onGround && !gameOver){
-    player.dy = player.jump;
-    player.onGround = false;
-    beep(600,0.1);
-  }
-}
-
+function jump(){ if(player.onGround && !gameOver){ player.dy=player.jump; player.onGround=false; beep(600,0.1); }}
 document.addEventListener("touchstart", ()=>{audioCtx.resume(); jump();});
-document.addEventListener("keydown", e=>{if(e.code==="Space"){audioCtx.resume(); jump();}});
+document.addEventListener("keydown", e=>{ if(e.code==="Space"){audioCtx.resume(); jump();}});
 
 // RESTART
-restartBtn.onclick = ()=>{ location.reload(); };
+restartBtn.onclick=()=>{ location.reload(); };
 
 // GAME LOOP
 function loop(){
   if(gameOver) return;
 
-  // BACKGROUND
-  bgX -= bgSpeed;
-  if(bgX <= -canvas.width) bgX = 0;
-  ctx.fillStyle = "#87CEEB";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle="#A0D995"; // ground
-  ctx.fillRect(0,450,canvas.width,50);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // PLAYER PHYSICS
-  player.dy += player.gravity;
-  player.y += player.dy;
+  // Background
+  bgX-=bgSpeed; if(bgX<=-canvas.width) bgX=0;
+  ctx.fillStyle="#87CEEB"; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle="#A0D995"; ctx.fillRect(0,450,canvas.width,50);
+
+  // PLAYER physics
+  player.dy+=player.gravity; player.y+=player.dy;
   if(player.y>=420){player.y=420; player.dy=0; player.onGround=true;}
 
-  // DRAW PLAYER IMAGE
-  ctx.drawImage(playerImg, player.x, player.y - player.h, player.w, player.h);
+  // ANIMATE SPRITE
+  frameTicker++;
+  if(frameTicker>=frameSpeed){ frameTicker=0; frame=(frame+1)%frameCount;}
+  ctx.drawImage(playerSprite, frame*64,0,64,64, player.x, player.y-player.h, player.w, player.h);
 
   // OBSTACLE
-  obstacle.x -= obstacle.speed;
-  if(obstacle.x<-obstacle.w){obstacle.x = canvas.width; score++; document.getElementById("score").textContent="Score: "+score;}
-  ctx.fillStyle="red";
-  ctx.fillRect(obstacle.x, obstacle.y-obstacle.h, obstacle.w, obstacle.h);
+  obstacle.x-=obstacle.speed;
+  if(obstacle.x<-obstacle.w){ obstacle.x=canvas.width; score++; document.getElementById("score").textContent="Score: "+score;}
+  ctx.fillStyle="red"; ctx.fillRect(obstacle.x, obstacle.y-obstacle.h, obstacle.w, obstacle.h);
 
   // COINS
   coins.forEach(c=>{
     if(!c.collected){
-      c.x -= obstacle.speed;
-      ctx.fillStyle="gold";
-      ctx.beginPath();
-      ctx.arc(c.x+c.w/2,c.y+c.h/2,c.w/2,0,Math.PI*2);
-      ctx.fill();
+      c.x-=obstacle.speed;
+      ctx.fillStyle="gold"; ctx.beginPath();
+      ctx.arc(c.x+c.w/2, c.y+c.h/2, c.w/2, 0, Math.PI*2); ctx.fill();
 
-      // collision
-      const margin = 4;
+      const margin=4;
       if(player.x+margin < c.x+c.w-margin && player.x+player.w-margin > c.x+margin &&
          player.y < c.y+c.h && player.y+player.h > c.y){
-        c.collected = true;
-        coinsCollected++;
-        document.getElementById("coins").textContent="Coins: "+coinsCollected;
+        c.collected=true; coinsCollected++; document.getElementById("coins").textContent="Coins: "+coinsCollected;
         beep(900,0.1);
       }
     }
-    if(c.x<-c.w){c.x=canvas.width+Math.random()*400; c.collected=false; c.y=300+Math.random()*100;}
+    if(c.x<-c.w){ c.x=canvas.width+Math.random()*400; c.collected=false; c.y=300+Math.random()*100; }
   });
 
-  // COLLISION WITH OBSTACLE
-  const margin = 4;
-  if(player.x+margin < obstacle.x+obstacle.w-margin &&
-     player.x+player.w-margin > obstacle.x+margin &&
-     player.y < obstacle.y-margin &&
-     player.y+player.h > obstacle.y-obstacle.h+margin){
-    gameOver=true;
-    beep(200,0.5);
+  // COLLISION
+  const margin=4;
+  if(player.x+margin < obstacle.x+obstacle.w-margin && player.x+player.w-margin > obstacle.x+margin &&
+     player.y < obstacle.y-margin && player.y+player.h > obstacle.y-obstacle.h+margin){
+    gameOver=true; beep(200,0.5);
     alert("Game Over! Score: "+score+" | Coins: "+coinsCollected);
     restartBtn.style.display="block";
   }
@@ -176,8 +130,7 @@ function loop(){
   requestAnimationFrame(loop);
 }
 
-// START GAME
-playerImg.onload = ()=>{ loop(); };
+playerSprite.onload=()=>{ loop(); };
 </script>
 
 </body>
