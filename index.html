@@ -2,115 +2,148 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Coin Game</title>
+<title>Runner Game - Scrolling Background</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-  body {
-    margin: 0;
-    background: #0b0b0b;
-    color: white;
-    font-family: Arial, sans-serif;
-    text-align: center;
-  }
-  canvas {
-    background: #1e1e1e;
-    display: block;
-    margin: 15px auto;
-    border: 2px solid #fff;
-  }
-  button {
-    padding: 12px 20px;
-    font-size: 16px;
-    cursor: pointer;
-    margin-top: 20px;
-  }
+body { margin:0; background:#87CEEB; text-align:center; font-family:Arial; }
+canvas { display:block; margin:20px auto; border-radius:10px; }
+#score,#coins{ font-size:18px; font-weight:bold; margin:5px; }
+#restartBtn{
+  display:none; padding:10px 20px; font-size:18px;
+  border:none; border-radius:8px; background-color:#00c853;
+  color:white; cursor:pointer; margin-top:10px;
+}
 </style>
 </head>
 <body>
 
-<h2>🪙 Coin Collector Game</h2>
-<p>Score: <span id="score">0</span></p>
-
-<button id="startBtn">▶ Start Game (Enable Sound)</button>
-
-<canvas id="game" width="400" height="400" style="display:none;"></canvas>
-
-<!-- Sounds -->
-<audio id="coinSound" preload="auto">
-  <source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_3b5e3f2c1b.mp3?filename=coin-collect-retro-8-bit-sound-effect-145251.mp3" type="audio/mpeg">
-</audio>
+<h2>🏃 Runner Game</h2>
+<canvas id="gameCanvas"></canvas>
+<p id="score">Score: 0</p>
+<p id="coins">Coins: 0</p>
+<p>Tap screen to jump</p>
+<button id="restartBtn">Restart</button>
 
 <script>
-const startBtn = document.getElementById("startBtn");
-const canvas = document.getElementById("game");
+const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-const scoreText = document.getElementById("score");
-const coinSound = document.getElementById("coinSound");
+canvas.width = 360; canvas.height = 500;
 
-let score = 0;
-let gameStarted = false;
+let score=0, coins=0, gameOver=false;
+let soundUnlocked=false;
 
-const player = { x: 180, y: 180, size: 20, speed: 4 };
-const coin = { x: 100, y: 100, size: 10 };
+// Sounds
+const jumpSound = new Audio("https://freesound.org/data/previews/331/331912_3248244-lq.mp3");
+const coinSound = new Audio("https://freesound.org/data/previews/146/146725_2615113-lq.mp3");
+const gameOverSound = new Audio("https://freesound.org/data/previews/276/276031_5121236-lq.mp3");
 
-const keys = {};
-window.addEventListener("keydown", e => keys[e.key] = true);
-window.addEventListener("keyup", e => keys[e.key] = false);
-
-// Unlock sound + start game
-startBtn.onclick = () => {
-  coinSound.play().then(() => {
-    coinSound.pause();
-    coinSound.currentTime = 0;
-  });
-  startBtn.style.display = "none";
-  canvas.style.display = "block";
-  gameStarted = true;
-  requestAnimationFrame(gameLoop);
-};
-
-function gameLoop() {
-  if (!gameStarted) return;
-
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Movement
-  if (keys.ArrowUp) player.y -= player.speed;
-  if (keys.ArrowDown) player.y += player.speed;
-  if (keys.ArrowLeft) player.x -= player.speed;
-  if (keys.ArrowRight) player.x += player.speed;
-
-  // Walls
-  player.x = Math.max(0, Math.min(canvas.width - player.size, player.x));
-  player.y = Math.max(0, Math.min(canvas.height - player.size, player.y));
-
-  // Player
-  ctx.fillStyle = "cyan";
-  ctx.fillRect(player.x, player.y, player.size, player.size);
-
-  // Coin
-  ctx.fillStyle = "gold";
-  ctx.beginPath();
-  ctx.arc(coin.x, coin.y, coin.size, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Collision
-  if (
-    player.x < coin.x + coin.size &&
-    player.x + player.size > coin.x - coin.size &&
-    player.y < coin.y + coin.size &&
-    player.y + player.size > coin.y - coin.size
-  ) {
-    score++;
-    scoreText.textContent = score;
-    coinSound.currentTime = 0;
-    coinSound.play();
-    coin.x = Math.random() * 360 + 20;
-    coin.y = Math.random() * 360 + 20;
+// Unlock sounds after first tap
+document.addEventListener("touchstart", () => {
+  if(!soundUnlocked){
+    jumpSound.play(); jumpSound.pause(); jumpSound.currentTime=0;
+    coinSound.play(); coinSound.pause(); coinSound.currentTime=0;
+    gameOverSound.play(); gameOverSound.pause(); gameOverSound.currentTime=0;
+    soundUnlocked = true;
   }
+}, {once:true});
 
-  requestAnimationFrame(gameLoop);
+// Player
+const playerImg = new Image();
+playerImg.src = "https://i.imgur.com/lXo8V6I.png";
+const player = {x:50,y:400,width:40,height:50,dy:0,gravity:1,jumpPower:-15,onGround:true};
+
+// Controls
+document.addEventListener("touchstart", jump);
+document.addEventListener("keydown", e => { if(e.code==="Space") jump(); });
+function jump(){ if(player.onGround){ player.dy=player.jumpPower; player.onGround=false; if(soundUnlocked) jumpSound.play(); }}
+
+// Background image
+const bgImg = new Image();
+bgImg.src = "https://i.imgur.com/rQH3N4k.png"; // example scrolling background
+let bgX = 0;
+const bgSpeed = 2;
+
+// Obstacles array
+let obstacles = [
+  {x:canvas.width, y:420, width:30, height:30, speed:4},
+  {x:canvas.width+200, y:420, width:30, height:30, speed:4},
+  {x:canvas.width+400, y:420, width:30, height:30, speed:4}
+];
+
+// Coins array
+let coinsArr = [
+  {x:canvas.width+150, y:380, width:20, height:20, collected:false},
+  {x:canvas.width+350, y:350, width:20, height:20, collected:false},
+  {x:canvas.width+550, y:400, width:20, height:20, collected:false}
+];
+
+// Restart button
+const restartBtn = document.getElementById("restartBtn");
+restartBtn.addEventListener("click", ()=>{
+  score=0; coins=0; gameOver=false;
+  obstacles.forEach((o,i)=>o.x = canvas.width + i*200);
+  coinsArr.forEach((c,i)=>c.x = canvas.width + 150 + i*200; c.collected=false);
+  restartBtn.style.display="none";
+  update();
+});
+
+// Update loop
+function update(){
+  if(gameOver){ restartBtn.style.display="inline-block"; return; }
+
+  // Background scrolling
+  bgX -= bgSpeed;
+  if(bgX <= -canvas.width) bgX = 0;
+  ctx.drawImage(bgImg, bgX, 0, canvas.width, canvas.height);
+  ctx.drawImage(bgImg, bgX + canvas.width, 0, canvas.width, canvas.height);
+
+  // Player physics
+  player.dy+=player.gravity; player.y+=player.dy;
+  if(player.y>=400){ player.y=400; player.dy=0; player.onGround=true; }
+
+  // Obstacles movement
+  obstacles.forEach(o=>{
+    o.x -= o.speed;
+    if(o.x<-o.width){
+      o.x = canvas.width + Math.random()*200;
+      score++; document.getElementById("score").textContent="Score: "+score;
+      if(score%5===0) o.speed += 0.5;
+    }
+    // Draw obstacle
+    ctx.fillStyle="red"; ctx.fillRect(o.x,o.y,o.width,o.height);
+
+    // Collision
+    if(player.x<o.x+o.width && player.x+player.width>o.x && player.y<o.y+o.height && player.y+player.height>o.y){
+      gameOver=true; if(soundUnlocked) gameOverSound.play();
+      alert("Game Over! Score: "+score+" | Coins: "+coins);
+      restartBtn.style.display="inline-block"; return;
+    }
+  });
+
+  // Coins movement
+  coinsArr.forEach(c=>{
+    c.x -= 4;
+    if(c.x<-c.width){ c.x=canvas.width + Math.random()*400; c.collected=false; c.y = 300 + Math.random()*100; }
+
+    // Draw coin
+    if(!c.collected){
+      ctx.fillStyle="gold"; ctx.beginPath(); ctx.arc(c.x+c.width/2, c.y+c.height/2, c.width/2,0,Math.PI*2); ctx.fill();
+    }
+
+    // Collision with player
+    if(!c.collected && player.x<c.x+c.width && player.x+player.width>c.x && player.y<c.y+c.height && player.y+player.height>c.y){
+      coins++; c.collected=true; document.getElementById("coins").textContent="Coins: "+coins;
+      if(soundUnlocked) coinSound.play();
+    }
+  });
+
+  // Draw player
+  ctx.drawImage(playerImg,player.x,player.y-player.height,player.width,player.height);
+
+  requestAnimationFrame(update);
 }
-</script>
 
+bgImg.onload = function(){ playerImg.onload=function(){ update(); } }
+</script>
 </body>
 </html>
