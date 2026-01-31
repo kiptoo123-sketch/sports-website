@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <title>Runner Game - Person</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <style>
 body { margin:0; background:#87CEEB; font-family:Arial; text-align:center; }
 #gameContainer { position:relative; width:360px; margin:20px auto; }
@@ -28,6 +27,7 @@ canvas { display:block; border-radius:10px; }
 <p>Tap or press SPACE to jump</p>
 
 <script>
+// CANVAS
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const restartBtn = document.getElementById("restartBtn");
@@ -50,10 +50,9 @@ let score=0, coinsCollected=0, gameOver=false;
 // PLAYER
 const player = {x:60, y:420, w:40, h:50, dy:0, gravity:0.8, jump:-16, onGround:true};
 
-// RUNNER SPRITE (4 frames)
-const playerSprite = new Image();
-playerSprite.src = "https://i.imgur.com/2d4eYqS.png"; // Example 4-frame running sprite
-let frame = 0, frameCount = 4, frameSpeed=6, frameTicker=0;
+// RUNNER IMAGE (single person)
+const playerImg = new Image();
+playerImg.src = "https://i.imgur.com/lXo8V6I.png"; // replace with your person image if desired
 
 // OBSTACLE
 const obstacle={x:360,y:440,w:30,h:30,speed:2.5};
@@ -91,10 +90,8 @@ function loop(){
   player.dy+=player.gravity; player.y+=player.dy;
   if(player.y>=420){player.y=420; player.dy=0; player.onGround=true;}
 
-  // ANIMATE SPRITE
-  frameTicker++;
-  if(frameTicker>=frameSpeed){ frameTicker=0; frame=(frame+1)%frameCount;}
-  ctx.drawImage(playerSprite, frame*64,0,64,64, player.x, player.y-player.h, player.w, player.h);
+  // DRAW RUNNER IMAGE
+  ctx.drawImage(playerImg, player.x, player.y-player.h, player.w, player.h);
 
   // OBSTACLE
   obstacle.x-=obstacle.speed;
@@ -106,7 +103,7 @@ function loop(){
     if(!c.collected){
       c.x-=obstacle.speed;
       ctx.fillStyle="gold"; ctx.beginPath();
-      ctx.arc(c.x+c.w/2, c.y+c.h/2, c.w/2, 0, Math.PI*2); ctx.fill();
+      ctx.arc(c.x+c.w/2,c.y+c.h/2,c.w/2,0,Math.PI*2); ctx.fill();
 
       const margin=4;
       if(player.x+margin < c.x+c.w-margin && player.x+player.w-margin > c.x+margin &&
@@ -130,7 +127,7 @@ function loop(){
   requestAnimationFrame(loop);
 }
 
-playerSprite.onload=()=>{ loop(); };
+playerImg.onload=()=>{ loop(); };
 </script>
 
 </body>
