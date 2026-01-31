@@ -37,14 +37,14 @@ button{
 <p id="score">Score: 0</p>
 <p>Tap or press SPACE to jump</p>
 
-<!-- 🔁 GUARANTEED RESTART -->
+<!-- Restart button (page reload for guaranteed restart) -->
 <button onclick="location.reload()">Restart Game</button>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-/* SOUND (WORKING) */
+/* 🔊 SOUND */
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 function beep(freq,time){
   const o = audioCtx.createOscillator();
@@ -56,19 +56,25 @@ function beep(freq,time){
   o.stop(audioCtx.currentTime + time);
 }
 
-/* GAME */
+/* GAME STATE */
 let score = 0;
 let gameOver = false;
 
+/* PLAYER */
 const player = {
-  x:60, y:420, w:40, h:50,
-  dy:0, gravity:0.8, jump:-13, onGround:true
+  x:60, y:420,
+  w:40, h:50,
+  dy:0, gravity:0.8, jump:-15, onGround:true
 };
 
+/* OBSTACLE */
 const obstacle = {
-  x:360, y:440, w:30, h:30, speed:2.5
+  x:360, y:440,
+  w:30, h:30,
+  speed:2   // medium speed for fair play
 };
 
+/* CONTROLS */
 function jump(){
   if(player.onGround && !gameOver){
     player.dy = player.jump;
@@ -88,22 +94,24 @@ document.addEventListener("keydown", e=>{
   }
 });
 
+/* GAME LOOP */
 function loop(){
   if(gameOver) return;
 
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // player
+  // Player physics
   player.dy += player.gravity;
   player.y += player.dy;
   if(player.y>=420){
     player.y=420; player.dy=0; player.onGround=true;
   }
 
+  // Draw player
   ctx.fillStyle="black";
   ctx.fillRect(player.x,player.y-player.h,player.w,player.h);
 
-  // obstacle
+  // Obstacle
   obstacle.x -= obstacle.speed;
   if(obstacle.x<-obstacle.w){
     obstacle.x = canvas.width;
@@ -114,12 +122,12 @@ function loop(){
   ctx.fillStyle="red";
   ctx.fillRect(obstacle.x,obstacle.y-obstacle.h,obstacle.w,obstacle.h);
 
-  // collision
+  // Collision (adjusted for fair play)
   if(
-    player.x < obstacle.x+obstacle.w &&
-    player.x+player.w > obstacle.x &&
-    player.y < obstacle.y &&
-    player.y+player.h > obstacle.y-obstacle.h
+    player.x + 5 < obstacle.x + obstacle.w - 5 &&
+    player.x + player.w - 5 > obstacle.x + 5 &&
+    player.y < obstacle.y - 5 &&
+    player.y + player.h > obstacle.y - obstacle.h + 5
   ){
     gameOver = true;
     beep(200,0.5);
