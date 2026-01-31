@@ -14,6 +14,10 @@ canvas { display:block; border-radius:10px; }
   background:#ff5252; color:white; cursor:pointer; display:none; z-index:10;
 }
 </style>
+
+<!-- Google AdSense -->
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5580404798212871"
+     crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -25,6 +29,17 @@ canvas { display:block; border-radius:10px; }
 <p id="score">Score: 0</p>
 <p id="coins">Coins: 0</p>
 <p>Tap or press SPACE to jump</p>
+
+<!-- AdSense Ad Unit (Safe placement) -->
+<ins class="adsbygoogle"
+     style="display:block; text-align:center; margin:10px 0;"
+     data-ad-client="ca-pub-5580404798212871"
+     data-ad-slot="1234567890"
+     data-ad-format="auto"
+     data-full-width-responsive="true"></ins>
+<script>
+     (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
 
 <script>
 // CANVAS
@@ -50,9 +65,9 @@ let score=0, coinsCollected=0, gameOver=false;
 // PLAYER
 const player = {x:60, y:420, w:40, h:50, dy:0, gravity:0.8, jump:-16, onGround:true};
 
-// RUNNER IMAGE (real person)
+// RUNNER IMAGE (single person)
 const playerImg = new Image();
-playerImg.src = "https://i.imgur.com/lXo8V6I.png"; // clear runner person
+playerImg.src = "https://i.imgur.com/lXo8V6I.png";
 
 // OBSTACLE
 const obstacle={x:360,y:440,w:30,h:30,speed:3};
@@ -63,9 +78,6 @@ let coins = [
   {x:800, y:350, w:20, h:20, collected:false},
   {x:1200, y:400, w:20, h:20, collected:false}
 ];
-
-// BACKGROUND
-let bgSpeed=1.5;
 
 // CONTROLS
 function jump(){ if(player.onGround && !gameOver){ player.dy=player.jump; player.onGround=false; beep(600,0.1); }}
