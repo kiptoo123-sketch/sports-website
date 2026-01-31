@@ -50,12 +50,12 @@ let score=0, coinsCollected=0, gameOver=false;
 // PLAYER
 const player = {x:60, y:420, w:40, h:50, dy:0, gravity:0.8, jump:-16, onGround:true};
 
-// RUNNER IMAGE (single person)
+// RUNNER IMAGE (real person)
 const playerImg = new Image();
-playerImg.src = "https://i.imgur.com/lXo8V6I.png"; // replace with your person image if desired
+playerImg.src = "https://i.imgur.com/lXo8V6I.png"; // clear runner person
 
 // OBSTACLE
-const obstacle={x:360,y:440,w:30,h:30,speed:2.5};
+const obstacle={x:360,y:440,w:30,h:30,speed:3};
 
 // COINS
 let coins = [
@@ -65,7 +65,7 @@ let coins = [
 ];
 
 // BACKGROUND
-let bgX=0, bgSpeed=1.5;
+let bgSpeed=1.5;
 
 // CONTROLS
 function jump(){ if(player.onGround && !gameOver){ player.dy=player.jump; player.onGround=false; beep(600,0.1); }}
@@ -79,10 +79,10 @@ restartBtn.onclick=()=>{ location.reload(); };
 function loop(){
   if(gameOver) return;
 
+  // Clear
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
   // Background
-  bgX-=bgSpeed; if(bgX<=-canvas.width) bgX=0;
   ctx.fillStyle="#87CEEB"; ctx.fillRect(0,0,canvas.width,canvas.height);
   ctx.fillStyle="#A0D995"; ctx.fillRect(0,450,canvas.width,50);
 
@@ -90,7 +90,7 @@ function loop(){
   player.dy+=player.gravity; player.y+=player.dy;
   if(player.y>=420){player.y=420; player.dy=0; player.onGround=true;}
 
-  // DRAW RUNNER IMAGE
+  // DRAW PLAYER
   ctx.drawImage(playerImg, player.x, player.y-player.h, player.w, player.h);
 
   // OBSTACLE
